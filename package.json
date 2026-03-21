@@ -1,0 +1,64 @@
+{
+  "name": "spacerizr",
+  "version": "0.2.0",
+  "type": "module",
+  "description": "Interactive 3D/2D C4 architecture visualizer for Structurizr DSL and workspace files",
+  "keywords": [
+    "structurizr",
+    "c4",
+    "architecture",
+    "visualization",
+    "3d",
+    "threejs",
+    "diagram",
+    "dsl"
+  ],
+  "author": "Tobias Cervin",
+  "license": "MIT",
+  "main": "./dist-lib/api.js",
+  "module": "./dist-lib/api.js",
+  "types": "./dist-lib/api.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist-lib/api.js",
+      "types": "./dist-lib/api.d.ts"
+    },
+    "./embed": {
+      "import": "./dist-lib/embed.js",
+      "types": "./dist-lib/embed.d.ts"
+    }
+  },
+  "bin": {
+    "spacerizr": "./cli/serve.js"
+  },
+  "files": [
+    "dist/",
+    "dist-lib/",
+    "cli/",
+    "README.md"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "build:lib": "vite build --mode lib",
+    "build:all": "npm run build && npm run build:lib",
+    "preview": "vite preview",
+    "prepublishOnly": "npm run build:all"
+  },
+  "dependencies": {
+    "three": "^0.183.2"
+  },
+  "devDependencies": {
+    "@types/three": "^0.183.1",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.1"
+  },
+  "peerDependencies": {
+    "three": ">=0.150.0"
+  },
+  "peerDependenciesMeta": {
+    "three": {
+      "optional": true
+    }
+  }
+}

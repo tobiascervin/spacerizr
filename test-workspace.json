@@ -1,0 +1,223 @@
+{
+  "id": 1,
+  "name": "Big Bank plc",
+  "description": "A sample Structurizr workspace for testing",
+  "model": {
+    "people": [
+      {
+        "id": "1",
+        "name": "Personal Banking Customer",
+        "description": "A customer of the bank, with personal bank accounts.",
+        "tags": "Element,Person",
+        "relationships": [
+          {
+            "id": "10",
+            "sourceId": "1",
+            "destinationId": "2",
+            "description": "Views account balances and makes payments using",
+            "technology": "HTTPS"
+          },
+          {
+            "id": "11",
+            "sourceId": "1",
+            "destinationId": "5",
+            "description": "Asks questions to",
+            "technology": "Telephone"
+          }
+        ]
+      },
+      {
+        "id": "5",
+        "name": "Customer Service Staff",
+        "description": "Customer service staff within the bank.",
+        "tags": "Element,Person",
+        "location": "Internal",
+        "relationships": [
+          {
+            "id": "12",
+            "sourceId": "5",
+            "destinationId": "2",
+            "description": "Uses"
+          }
+        ]
+      },
+      {
+        "id": "6",
+        "name": "Back Office Staff",
+        "description": "Administration and support staff within the bank.",
+        "tags": "Element,Person",
+        "location": "Internal",
+        "relationships": [
+          {
+            "id": "13",
+            "sourceId": "6",
+            "destinationId": "2",
+            "description": "Uses"
+          }
+        ]
+      }
+    ],
+    "softwareSystems": [
+      {
+        "id": "2",
+        "name": "Internet Banking System",
+        "description": "Allows customers to view information about their bank accounts, and make payments.",
+        "tags": "Element,Software System",
+        "containers": [
+          {
+            "id": "20",
+            "name": "Web Application",
+            "description": "Delivers the static content and the Internet banking SPA.",
+            "technology": "Java, Spring MVC",
+            "tags": "Element,Container",
+            "relationships": [
+              {
+                "id": "30",
+                "sourceId": "20",
+                "destinationId": "21",
+                "description": "Delivers to the customer's web browser"
+              }
+            ]
+          },
+          {
+            "id": "21",
+            "name": "Single-Page Application",
+            "description": "Provides all of the Internet banking functionality to customers via their web browser.",
+            "technology": "JavaScript, Angular",
+            "tags": "Element,Container",
+            "relationships": [
+              {
+                "id": "31",
+                "sourceId": "21",
+                "destinationId": "22",
+                "description": "Makes API calls to",
+                "technology": "JSON/HTTPS"
+              }
+            ]
+          },
+          {
+            "id": "22",
+            "name": "API Application",
+            "description": "Provides Internet banking functionality via a JSON/HTTPS API.",
+            "technology": "Java, Spring Boot",
+            "tags": "Element,Container",
+            "components": [
+              {
+                "id": "40",
+                "name": "Sign In Controller",
+                "description": "Allows users to sign in to the Internet Banking System.",
+                "technology": "Spring MVC Controller",
+                "tags": "Element,Component",
+                "relationships": [
+                  {
+                    "id": "50",
+                    "sourceId": "40",
+                    "destinationId": "41",
+                    "description": "Uses"
+                  }
+                ]
+              },
+              {
+                "id": "41",
+                "name": "Security Component",
+                "description": "Provides functionality related to signing in, changing passwords, etc.",
+                "technology": "Spring Bean",
+                "tags": "Element,Component",
+                "relationships": [
+                  {
+                    "id": "51",
+                    "sourceId": "41",
+                    "destinationId": "23",
+                    "description": "Reads from and writes to",
+                    "technology": "SQL/TCP"
+                  }
+                ]
+              },
+              {
+                "id": "42",
+                "name": "Accounts Summary Controller",
+                "description": "Provides customers with a summary of their bank accounts.",
+                "technology": "Spring MVC Controller",
+                "tags": "Element,Component",
+                "relationships": [
+                  {
+                    "id": "52",
+                    "sourceId": "42",
+                    "destinationId": "3",
+                    "description": "Uses",
+                    "technology": "XML/HTTPS"
+                  }
+                ]
+              }
+            ],
+            "relationships": [
+              {
+                "id": "32",
+                "sourceId": "22",
+                "destinationId": "23",
+                "description": "Reads from and writes to",
+                "technology": "SQL/TCP"
+              },
+              {
+                "id": "33",
+                "sourceId": "22",
+                "destinationId": "3",
+                "description": "Makes API calls to",
+                "technology": "XML/HTTPS"
+              },
+              {
+                "id": "34",
+                "sourceId": "22",
+                "destinationId": "4",
+                "description": "Sends e-mail using"
+              }
+            ]
+          },
+          {
+            "id": "23",
+            "name": "Database",
+            "description": "Stores user registration information, hashed auth credentials, access logs, etc.",
+            "technology": "Oracle Database Schema",
+            "tags": "Element,Container,Database"
+          }
+        ],
+        "relationships": [
+          {
+            "id": "14",
+            "sourceId": "2",
+            "destinationId": "4",
+            "description": "Sends e-mail using"
+          },
+          {
+            "id": "15",
+            "sourceId": "2",
+            "destinationId": "3",
+            "description": "Gets account information from, and makes payments using"
+          }
+        ]
+      },
+      {
+        "id": "3",
+        "name": "Mainframe Banking System",
+        "description": "Stores all of the core banking information about customers, accounts, transactions, etc.",
+        "tags": "Element,Software System,External",
+        "location": "External"
+      },
+      {
+        "id": "4",
+        "name": "E-mail System",
+        "description": "The internal Microsoft Exchange e-mail system.",
+        "tags": "Element,Software System,External",
+        "location": "External",
+        "relationships": [
+          {
+            "id": "16",
+            "sourceId": "4",
+            "destinationId": "1",
+            "description": "Sends e-mails to"
+          }
+        ]
+      }
+    ]
+  }
+}

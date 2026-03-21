@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Spacerizr</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html, body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #0f0f1a;
+        color: rgba(255,255,255,0.85);
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+      }
+      [data-theme="light"] ~ body,
+      [data-theme="light"] {
+        color: rgba(0,0,0,0.8);
+      }
+      #app {
+        width: 100%;
+        height: 100%;
+        position: relative;
+      }
+      canvas {
+        display: block;
+      }
+
+      /* ── Breadcrumb ── */
+      #breadcrumb {
+        position: absolute;
+        top: 16px;
+        left: 16px;
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        z-index: 10;
+      }
+      #breadcrumb button {
+        background: rgba(99, 102, 241, 0.12);
+        border: 1px solid rgba(99, 102, 241, 0.25);
+        color: #c7d2fe;
+        padding: 6px 14px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 13px;
+        font-family: inherit;
+        font-weight: 500;
+        backdrop-filter: blur(12px);
+        transition: all 0.2s ease;
+      }
+      #breadcrumb button:hover {
+        background: rgba(99, 102, 241, 0.25);
+        border-color: rgba(99, 102, 241, 0.4);
+        color: #e0e7ff;
+      }
+      #breadcrumb button.active {
+        background: rgba(99, 102, 241, 0.2);
+        border-color: rgba(99, 102, 241, 0.4);
+      }
+      #breadcrumb .separator {
+        color: rgba(129, 140, 248, 0.3);
+        font-size: 14px;
+        user-select: none;
+      }
+
+      /* ── Tooltip ── */
+      #tooltip {
+        position: absolute;
+        display: none;
+        background: rgba(15, 15, 30, 0.92);
+        border: 1px solid rgba(99, 102, 241, 0.2);
+        color: #e0e0e0;
+        padding: 12px 16px;
+        border-radius: 10px;
+        font-size: 13px;
+        pointer-events: none;
+        backdrop-filter: blur(16px);
+        max-width: 300px;
+        z-index: 20;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      }
+      #tooltip .tooltip-name {
+        font-weight: 600;
+        font-size: 14px;
+        margin-bottom: 2px;
+        color: #e0e7ff;
+      }
+      #tooltip .tooltip-type {
+        font-size: 11px;
+        color: rgba(129, 140, 248, 0.7);
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        font-weight: 500;
+      }
+      #tooltip .tooltip-desc {
+        margin-top: 8px;
+        color: rgba(200, 210, 254, 0.7);
+        line-height: 1.5;
+      }
+      #tooltip .tooltip-hint {
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid rgba(99, 102, 241, 0.15);
+        font-size: 11px;
+        color: rgba(129, 140, 248, 0.5);
+      }
+
+      /* ── Drop zone ── */
+      #dropzone {
+        position: absolute;
+        bottom: 16px;
+        right: 16px;
+        z-index: 10;
+      }
+      #dropzone label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(99, 102, 241, 0.1);
+        border: 1px dashed rgba(99, 102, 241, 0.3);
+        color: rgba(129, 140, 248, 0.6);
+        padding: 8px 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 12px;
+        font-family: inherit;
+        font-weight: 500;
+        transition: all 0.2s ease;
+      }
+      #dropzone label:hover {
+        background: rgba(99, 102, 241, 0.18);
+        border-color: rgba(99, 102, 241, 0.5);
+        color: rgba(129, 140, 248, 0.9);
+      }
+      #dropzone input {
+        display: none;
+      }
+
+      /* ── Controls panel ── */
+      #controls-panel {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        z-index: 15;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 8px;
+      }
+      .controls-header button {
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(99, 102, 241, 0.1);
+        border: 1px solid rgba(99, 102, 241, 0.25);
+        border-radius: 8px;
+        color: #818cf8;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      .controls-header button:hover,
+      .controls-header button.active {
+        background: rgba(99, 102, 241, 0.2);
+        border-color: rgba(99, 102, 241, 0.4);
+      }
+      .controls-body {
+        display: none;
+        background: rgba(15, 15, 30, 0.92);
+        border: 1px solid rgba(99, 102, 241, 0.2);
+        border-radius: 12px;
+        padding: 16px;
+        backdrop-filter: blur(16px);
+        min-width: 220px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      }
+      .controls-body.open {
+        display: block;
+      }
+      .control-section {
+        margin-bottom: 14px;
+      }
+      .control-section:last-child {
+        margin-bottom: 0;
+      }
+      .section-title {
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: rgba(129, 140, 248, 0.5);
+        margin-bottom: 8px;
+      }
+      .control-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 6px;
+        gap: 8px;
+      }
+      .control-row:last-child {
+        margin-bottom: 0;
+      }
+      .control-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: #c7d2fe;
+        cursor: pointer;
+      }
+      .control-label input[type="checkbox"] {
+        accent-color: #6366f1;
+        width: 14px;
+        height: 14px;
+      }
+      .control-text {
+        font-size: 12px;
+        color: rgba(199, 210, 254, 0.6);
+        white-space: nowrap;
+      }
+      .slider {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100px;
+        height: 4px;
+        border-radius: 2px;
+        background: rgba(99, 102, 241, 0.2);
+        outline: none;
+      }
+      .slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: #818cf8;
+        cursor: pointer;
+        border: none;
+      }
+      .toggle-group {
+        display: flex;
+        border-radius: 6px;
+        overflow: hidden;
+        border: 1px solid rgba(99, 102, 241, 0.25);
+        width: 100%;
+      }
+      .toggle-btn {
+        flex: 1;
+        padding: 6px 0;
+        font-size: 12px;
+        font-family: inherit;
+        font-weight: 500;
+        background: transparent;
+        color: rgba(199, 210, 254, 0.5);
+        border: none;
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+      .toggle-btn.active {
+        background: rgba(99, 102, 241, 0.25);
+        color: #e0e7ff;
+      }
+      .toggle-btn:hover:not(.active) {
+        background: rgba(99, 102, 241, 0.1);
+        color: #c7d2fe;
+      }
+
+      /* ── Export buttons ── */
+      .export-row {
+        display: flex;
+        gap: 8px;
+      }
+      .export-btn {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 14px;
+        background: rgba(99, 102, 241, 0.1);
+        border: 1px solid rgba(99, 102, 241, 0.2);
+        border-radius: 6px;
+        color: rgba(199, 210, 254, 0.7);
+        font-size: 11px;
+        font-family: inherit;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        flex: 1;
+        justify-content: center;
+      }
+      .export-btn:hover {
+        background: rgba(99, 102, 241, 0.2);
+        border-color: rgba(99, 102, 241, 0.4);
+        color: #e0e7ff;
+      }
+      .export-btn:active {
+        transform: scale(0.97);
+      }
+      [data-theme="light"] .export-btn {
+        background: rgba(99, 102, 241, 0.06);
+        border-color: rgba(99, 102, 241, 0.2);
+        color: #4338ca;
+      }
+      [data-theme="light"] .export-btn:hover {
+        background: rgba(99, 102, 241, 0.12);
+        border-color: rgba(99, 102, 241, 0.35);
+        color: #3730a3;
+      }
+
+      /* ── 2D canvas ── */
+      #canvas-2d {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      /* ── Light theme overrides ── */
+      [data-theme="light"] #breadcrumb button {
+        background: rgba(99, 102, 241, 0.08);
+        border-color: rgba(99, 102, 241, 0.25);
+        color: #4338ca;
+        backdrop-filter: blur(8px);
+      }
+      [data-theme="light"] #breadcrumb button:hover {
+        background: rgba(99, 102, 241, 0.15);
+        color: #3730a3;
+      }
+      [data-theme="light"] #breadcrumb button.active {
+        background: rgba(99, 102, 241, 0.15);
+        border-color: rgba(99, 102, 241, 0.35);
+      }
+      [data-theme="light"] #breadcrumb .separator {
+        color: rgba(99, 102, 241, 0.3);
+      }
+      [data-theme="light"] #tooltip {
+        background: rgba(255, 255, 255, 0.95);
+        border-color: rgba(99, 102, 241, 0.2);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      }
+      [data-theme="light"] #tooltip .tooltip-name {
+        color: #1e1b4b;
+      }
+      [data-theme="light"] #tooltip .tooltip-type {
+        color: #6366f1;
+      }
+      [data-theme="light"] #tooltip .tooltip-desc {
+        color: #475569;
+      }
+      [data-theme="light"] #tooltip .tooltip-hint {
+        color: #94a3b8;
+        border-top-color: rgba(99, 102, 241, 0.1);
+      }
+      [data-theme="light"] .controls-header button {
+        background: rgba(99, 102, 241, 0.08);
+        border-color: rgba(99, 102, 241, 0.2);
+        color: #6366f1;
+      }
+      [data-theme="light"] .controls-body {
+        background: rgba(255, 255, 255, 0.95);
+        border-color: rgba(99, 102, 241, 0.15);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      }
+      [data-theme="light"] .section-title {
+        color: #6366f1;
+      }
+      [data-theme="light"] .control-label {
+        color: #374151;
+      }
+      [data-theme="light"] .control-text {
+        color: #6b7280;
+      }
+      [data-theme="light"] .toggle-btn {
+        color: #9ca3af;
+      }
+      [data-theme="light"] .toggle-btn.active {
+        background: rgba(99, 102, 241, 0.15);
+        color: #4338ca;
+      }
+      [data-theme="light"] #dropzone label {
+        background: rgba(99, 102, 241, 0.06);
+        border-color: rgba(99, 102, 241, 0.2);
+        color: #6366f1;
+      }
+
+      /* ── Drag overlay ── */
+      #drag-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 15, 30, 0.85);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+        pointer-events: none;
+      }
+      #drag-overlay.active {
+        display: flex;
+      }
+      #drag-overlay .drag-text {
+        color: #818cf8;
+        font-size: 20px;
+        font-weight: 600;
+        padding: 24px 48px;
+        border: 2px dashed rgba(99, 102, 241, 0.4);
+        border-radius: 16px;
+      }
+      /* ── Welcome screen (standalone) ── */
+      #welcome-screen {
+        position: absolute;
+        inset: 0;
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #0f0f1a;
+      }
+      [data-theme="light"] #welcome-screen {
+        background: #f8f8f8;
+      }
+      .welcome-content {
+        text-align: center;
+        max-width: 480px;
+        width: 100%;
+        padding: 40px;
+      }
+      .welcome-logo {
+        font-size: 36px;
+        font-weight: 600;
+        color: #818cf8;
+        margin-bottom: 8px;
+        letter-spacing: -0.5px;
+      }
+      [data-theme="light"] .welcome-logo {
+        color: #6366f1;
+      }
+      .welcome-tagline {
+        font-size: 14px;
+        color: rgba(255,255,255,0.35);
+        letter-spacing: 1px;
+        margin-bottom: 40px;
+      }
+      [data-theme="light"] .welcome-tagline {
+        color: rgba(0,0,0,0.4);
+      }
+      .welcome-dropzone {
+        border: 2px dashed rgba(129,140,248,0.25);
+        border-radius: 16px;
+        padding: 48px 32px;
+        transition: all 0.2s;
+      }
+      .welcome-dropzone.drag-over {
+        border-color: rgba(129,140,248,0.5);
+        background: rgba(129,140,248,0.04);
+      }
+      .welcome-drop-icon {
+        color: rgba(129,140,248,0.4);
+        margin-bottom: 16px;
+      }
+      .welcome-drop-text {
+        font-size: 15px;
+        color: rgba(255,255,255,0.6);
+        margin-bottom: 12px;
+      }
+      .welcome-drop-text strong {
+        color: #818cf8;
+        font-weight: 600;
+      }
+      [data-theme="light"] .welcome-drop-text {
+        color: rgba(0,0,0,0.5);
+      }
+      [data-theme="light"] .welcome-drop-text strong {
+        color: #6366f1;
+      }
+      .welcome-drop-or {
+        font-size: 12px;
+        color: rgba(255,255,255,0.25);
+        margin-bottom: 12px;
+      }
+      [data-theme="light"] .welcome-drop-or {
+        color: rgba(0,0,0,0.25);
+      }
+      .welcome-browse-btn {
+        display: inline-block;
+        padding: 10px 24px;
+        border-radius: 8px;
+        background: rgba(129,140,248,0.15);
+        border: 1px solid rgba(129,140,248,0.3);
+        color: #a5b4fc;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.15s;
+        font-family: inherit;
+      }
+      .welcome-browse-btn:hover {
+        background: rgba(129,140,248,0.25);
+        border-color: rgba(129,140,248,0.5);
+        color: #c7d2fe;
+      }
+      [data-theme="light"] .welcome-browse-btn {
+        background: rgba(99,102,241,0.08);
+        border-color: rgba(99,102,241,0.25);
+        color: #6366f1;
+      }
+      [data-theme="light"] .welcome-browse-btn:hover {
+        background: rgba(99,102,241,0.15);
+      }
+      .welcome-formats {
+        font-size: 11px;
+        color: rgba(255,255,255,0.2);
+        margin-top: 24px;
+        letter-spacing: 0.5px;
+      }
+      [data-theme="light"] .welcome-formats {
+        color: rgba(0,0,0,0.25);
+      }
+
+      /* ── File browser (landing page) ── */
+      #file-browser {
+        position: absolute;
+        inset: 0;
+        z-index: 100;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: #0f0f1a;
+        padding: 40px;
+      }
+      [data-theme="light"] #file-browser {
+        background: #f8f8f8;
+      }
+      .fb-header {
+        text-align: center;
+        margin-bottom: 48px;
+      }
+      .fb-logo {
+        font-size: 32px;
+        font-weight: 600;
+        color: #818cf8;
+        margin-bottom: 8px;
+        letter-spacing: -0.5px;
+      }
+      [data-theme="light"] .fb-logo {
+        color: #6366f1;
+      }
+      .fb-subtitle {
+        font-size: 14px;
+        color: rgba(255,255,255,0.4);
+        letter-spacing: 2px;
+        text-transform: uppercase;
+      }
+      [data-theme="light"] .fb-subtitle {
+        color: rgba(0,0,0,0.4);
+      }
+      .fb-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 16px;
+        max-width: 800px;
+        width: 100%;
+      }
+      .fb-dir-label {
+        grid-column: 1 / -1;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: rgba(255,255,255,0.3);
+        padding: 8px 0 0;
+        border-top: 1px solid rgba(255,255,255,0.06);
+        margin-top: 8px;
+      }
+      [data-theme="light"] .fb-dir-label {
+        color: rgba(0,0,0,0.35);
+        border-top-color: rgba(0,0,0,0.08);
+      }
+      .fb-card {
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 12px;
+        padding: 24px 20px;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-align: center;
+        color: inherit;
+        font-family: inherit;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+      }
+      .fb-card:hover {
+        background: rgba(129, 140, 248, 0.1);
+        border-color: rgba(129, 140, 248, 0.3);
+        transform: translateY(-2px);
+      }
+      [data-theme="light"] .fb-card {
+        background: white;
+        border-color: rgba(0,0,0,0.1);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      }
+      [data-theme="light"] .fb-card:hover {
+        background: rgba(99,102,241,0.05);
+        border-color: rgba(99,102,241,0.3);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      }
+      .fb-card-icon {
+        font-size: 24px;
+        color: #818cf8;
+        font-weight: 300;
+        opacity: 0.7;
+      }
+      .fb-card-name {
+        font-size: 14px;
+        font-weight: 600;
+        color: rgba(255,255,255,0.9);
+      }
+      [data-theme="light"] .fb-card-name {
+        color: rgba(0,0,0,0.85);
+      }
+      .fb-card-ext {
+        font-size: 11px;
+        color: rgba(255,255,255,0.3);
+        font-family: monospace;
+      }
+      [data-theme="light"] .fb-card-ext {
+        color: rgba(0,0,0,0.35);
+      }
+
+      /* ── Top bar (file switcher + breadcrumb) ── */
+      #top-bar {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        z-index: 20;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      #fb-close-btn {
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+        border: 1px solid rgba(255,255,255,0.12);
+        background: rgba(15,15,26,0.85);
+        color: rgba(255,255,255,0.5);
+        font-size: 16px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.15s;
+        backdrop-filter: blur(8px);
+        flex-shrink: 0;
+        font-family: inherit;
+        line-height: 1;
+      }
+      #fb-close-btn:hover {
+        background: rgba(239,68,68,0.15);
+        border-color: rgba(239,68,68,0.4);
+        color: #f87171;
+      }
+      [data-theme="light"] #fb-close-btn {
+        background: rgba(255,255,255,0.9);
+        border-color: rgba(0,0,0,0.12);
+        color: rgba(0,0,0,0.4);
+      }
+      [data-theme="light"] #fb-close-btn:hover {
+        background: rgba(239,68,68,0.08);
+        border-color: rgba(239,68,68,0.3);
+        color: #ef4444;
+      }
+      .fb-separator {
+        width: 1px;
+        height: 20px;
+        background: rgba(255,255,255,0.1);
+        margin: 0 4px;
+        flex-shrink: 0;
+      }
+      [data-theme="light"] .fb-separator {
+        background: rgba(0,0,0,0.1);
+      }
+      #fb-file-select {
+        padding: 6px 10px;
+        border-radius: 8px;
+        border: 1px solid rgba(255,255,255,0.12);
+        background: rgba(15,15,26,0.85);
+        color: rgba(255,255,255,0.7);
+        font-size: 12px;
+        font-family: inherit;
+        cursor: pointer;
+        backdrop-filter: blur(8px);
+        max-width: 180px;
+      }
+      [data-theme="light"] #fb-file-select {
+        background: rgba(255,255,255,0.9);
+        border-color: rgba(0,0,0,0.12);
+        color: rgba(0,0,0,0.6);
+      }
+      /* When breadcrumb is inside top-bar, reset its positioning */
+      #top-bar #breadcrumb {
+        position: static;
+        z-index: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div id="breadcrumb"></div>
+      <div id="tooltip">
+        <div class="tooltip-type"></div>
+        <div class="tooltip-name"></div>
+        <div class="tooltip-desc"></div>
+        <div class="tooltip-hint"></div>
+      </div>
+      <div id="dropzone">
+        <label>
+          <span>Load .json / .dsl</span>
+          <input type="file" accept=".json,.dsl" id="file-input" />
+        </label>
+      </div>
+      <div id="drag-overlay">
+        <div class="drag-text">Drop .json or .dsl file here</div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
