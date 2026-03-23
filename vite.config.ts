@@ -25,7 +25,7 @@ export default defineConfig(({ mode }) => {
   // Default: App build (static site)
   return {
     root: ".",
-    base: process.env.GITHUB_PAGES ? "/spacerizr/" : "/",
+    base: "/",
     build: {
       outDir: "dist",
     },

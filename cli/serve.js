@@ -4,7 +4,7 @@ import { createServer } from "node:http";
 import { readFileSync, existsSync, readdirSync, statSync, writeFileSync, watchFile } from "node:fs";
 import { join, resolve, extname, basename, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const DIST_DIR = join(__dirname, "..", "dist");
@@ -220,7 +220,7 @@ const server = createServer((req, res) => {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
       "Connection": "keep-alive",
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": `http://localhost:${port}`,
     });
     res.write("data: {\"type\":\"connected\"}\n\n");
     sseClients.add(res);
@@ -250,29 +250,49 @@ const server = createServer((req, res) => {
       res.end("File not found");
       return;
     }
-    const content = readFileSync(filePath, "utf-8");
-    const type = filePath.endsWith(".dsl") ? "dsl" : "json";
+    // Path traversal protection: only allow files within the workspace directory
+    const baseDir = statSync(resolvedPath).isDirectory() ? resolvedPath : dirname(resolvedPath);
+    const resolvedFile = resolve(filePath);
+    if (!resolvedFile.startsWith(baseDir + "/") && resolvedFile !== baseDir) {
+      res.writeHead(403);
+      res.end("Access denied");
+      return;
+    }
+    const content = readFileSync(resolvedFile, "utf-8");
+    const type = resolvedFile.endsWith(".dsl") ? "dsl" : "json";
     res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ content, type, name: basename(filePath) }));
+    res.end(JSON.stringify({ content, type, name: basename(resolvedFile) }));
     return;
   }
 
   // Serve static files from dist/
   let filePath = join(DIST_DIR, pathname === "/" ? "index.html" : pathname);
 
+  // Path traversal protection: ensure resolved path stays within DIST_DIR
+  const resolvedStatic = resolve(filePath);
+  if (!resolvedStatic.startsWith(DIST_DIR + "/") && resolvedStatic !== DIST_DIR) {
+    filePath = join(DIST_DIR, "index.html"); // SPA fallback
+  }
+
   if (!existsSync(filePath)) {
     // SPA fallback
     filePath = join(DIST_DIR, "index.html");
   }
 
+  const securityHeaders = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Content-Security-Policy": "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:",
+  };
+
   try {
     const content = readFileSync(filePath);
     const ext = extname(filePath);
     const mime = MIME[ext] || "application/octet-stream";
-    res.writeHead(200, { "Content-Type": mime });
+    res.writeHead(200, { "Content-Type": mime, ...securityHeaders });
     res.end(content);
   } catch {
-    res.writeHead(404);
+    res.writeHead(404, securityHeaders);
     res.end("Not found");
   }
 });
@@ -286,7 +306,7 @@ server.listen(port, () => {
     const cmd =
       process.platform === "darwin" ? "open" :
       process.platform === "win32" ? "start" : "xdg-open";
-    execSync(`${cmd} ${url}`, { stdio: "ignore" });
+    execFileSync(cmd, [url], { stdio: "ignore" });
   } catch {
     // Couldn't open browser, user can open manually
   }

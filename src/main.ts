@@ -1,4 +1,13 @@
 import { C4Element, C4Model } from "./types";
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 import { getViewState, getElementName, hasChildren } from "./navigation";
 import {
   createScene,
@@ -254,8 +263,10 @@ function init(): void {
     }
   });
 
-  // Expose for testing
-  (window as any).__navigateTo = navigateTo;
+  // Expose for testing (dev mode only)
+  if (import.meta.env.DEV) {
+    (window as any).__navigateTo = navigateTo;
+  }
 }
 
 function showWelcomeScreen(): void {
@@ -381,16 +392,16 @@ function showFileBrowser(files: WorkspaceFile[]): void {
 
   for (const [dir, dirFiles] of groups) {
     if (groups.size > 1 && dir !== ".") {
-      html += `<div class="fb-dir-label">${dir}/</div>`;
+      html += `<div class="fb-dir-label">${escapeHtml(dir)}/</div>`;
     }
     for (const f of dirFiles) {
       const icon = f.type === "dsl" ? "{ }" : "{ }";
       const ext = f.type === "dsl" ? ".dsl" : ".json";
       const nameWithoutExt = f.name.replace(/\.(dsl|json)$/, "");
       html += `
-        <button class="fb-card" data-path="${f.path}">
+        <button class="fb-card" data-path="${escapeHtml(f.path)}">
           <div class="fb-card-icon">${icon}</div>
-          <div class="fb-card-name">${nameWithoutExt}</div>
+          <div class="fb-card-name">${escapeHtml(nameWithoutExt)}</div>
           <div class="fb-card-ext">${ext}</div>
         </button>
       `;
