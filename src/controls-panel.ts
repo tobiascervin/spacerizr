@@ -1,4 +1,5 @@
 import { settings, notifySettingsChange } from "./settings";
+import { enterPresentation } from "./presentation";
 
 export type ExportHandler = (format: "png" | "svg") => void;
 
@@ -83,6 +84,16 @@ export function createControlsPanel(onExport?: ExportHandler): void {
           </button>
         </div>
       </div>
+
+      <div class="control-section">
+        <div class="section-title">Present</div>
+        <div class="control-row">
+          <button class="export-btn" id="present-btn" title="Enter presentation mode (P)" style="width:100%">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="1" y="2" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M6 6l5 3-5 3V6z" fill="currentColor"/></svg>
+            <span>Fullscreen</span>
+          </button>
+        </div>
+      </div>
     </div>
   `;
 
@@ -137,6 +148,9 @@ export function createControlsPanel(onExport?: ExportHandler): void {
   // Export buttons
   document.getElementById("export-png")!.addEventListener("click", () => onExport?.("png"));
   document.getElementById("export-svg")!.addEventListener("click", () => onExport?.("svg"));
+
+  // Present button
+  document.getElementById("present-btn")!.addEventListener("click", () => enterPresentation());
 }
 
 function bindCheckbox(id: string, onChange: (val: boolean) => void): void {

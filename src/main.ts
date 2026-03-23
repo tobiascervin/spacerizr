@@ -29,9 +29,10 @@ import {
 import { testModel } from "./testdata";
 import { parseStructurizrJSON } from "./structurizr-parser";
 import { parseStructurizrDSL } from "./dsl-parser";
-import { settings, onSettingsChange } from "./settings";
+import { settings, onSettingsChange, notifySettingsChange } from "./settings";
 import { createControlsPanel } from "./controls-panel";
 import { exportPNG, exportSVG } from "./export";
+import { initPresentation, enterPresentation, exitPresentation, isPresentationActive } from "./presentation";
 
 let currentPath: string[] = [];
 let sceneCtx: SceneContext;
@@ -72,6 +73,7 @@ function navigateTo(path: string[]): void {
   renderView(sceneCtx, viewState);
   if (is2DReady()) render2DView(viewState);
   updateBreadcrumb();
+  updateUrlHash();
 }
 
 function handleElementClick(element: C4Element): void {
@@ -178,6 +180,87 @@ function handleSettingsChange(): void {
   }
 }
 
+// ── URL hash settings serialization ──
+
+function updateUrlHash(): void {
+  const params: string[] = [];
+  if (settings.theme !== "dark") params.push(`theme=${settings.theme}`);
+  if (settings.viewMode !== "3d") params.push(`view=${settings.viewMode}`);
+  if (currentPath.length > 0) params.push(`path=${currentPath.join(",")}`);
+  const hash = params.length > 0 ? "#" + params.join("&") : "";
+  if (window.location.hash !== hash) {
+    history.replaceState(null, "", hash || window.location.pathname + window.location.search);
+  }
+}
+
+function applyUrlHash(): void {
+  const hash = window.location.hash.slice(1);
+  if (!hash) return;
+
+  for (const part of hash.split("&")) {
+    const [key, value] = part.split("=");
+    switch (key) {
+      case "theme":
+        if (value === "light" || value === "dark") {
+          settings.theme = value;
+          previousTheme = value;
+        }
+        break;
+      case "view":
+        if (value === "2d" || value === "3d") {
+          settings.viewMode = value;
+        }
+        break;
+      case "path":
+        // Applied after model loads
+        break;
+    }
+  }
+}
+
+function getHashPath(): string[] {
+  const hash = window.location.hash.slice(1);
+  if (!hash) return [];
+  for (const part of hash.split("&")) {
+    const [key, value] = part.split("=");
+    if (key === "path" && value) return value.split(",");
+  }
+  return [];
+}
+
+// ── URL-based model loading ──
+
+async function loadFromUrl(url: string): Promise<boolean> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return false;
+    const text = await res.text();
+    const isDsl = url.endsWith(".dsl") || text.trimStart().startsWith("workspace");
+    const parsed = isDsl ? parseStructurizrDSL(text) : parseStructurizrJSON(text);
+    loadModel(parsed);
+    // Apply path from hash after loading
+    const hashPath = getHashPath();
+    if (hashPath.length > 0) navigateTo(hashPath);
+    return true;
+  } catch (err) {
+    console.error("Failed to load from URL:", err);
+    return false;
+  }
+}
+
+function loadFromBase64(encoded: string): boolean {
+  try {
+    const text = atob(encoded);
+    const isDsl = text.trimStart().startsWith("workspace");
+    const parsed = isDsl ? parseStructurizrDSL(text) : parseStructurizrJSON(text);
+    loadModel(parsed);
+    return true;
+  } catch (err) {
+    console.error("Failed to parse base64 content:", err);
+    return false;
+  }
+}
+
 // ── File loading ──
 
 function handleFile(file: File): void {
@@ -196,6 +279,21 @@ function handleFile(file: File): void {
     }
   };
   reader.readAsText(file);
+}
+
+function loadFromText(text: string): boolean {
+  try {
+    const trimmed = text.trim();
+    const isDsl = trimmed.startsWith("workspace") || trimmed.startsWith("model");
+    const isJson = trimmed.startsWith("{");
+    if (!isDsl && !isJson) return false;
+    const parsed = isDsl ? parseStructurizrDSL(text) : parseStructurizrJSON(text);
+    loadModel(parsed);
+    return true;
+  } catch (err) {
+    console.error("Failed to parse pasted content:", err);
+    return false;
+  }
 }
 
 function setupFileHandling(): void {
@@ -229,10 +327,67 @@ function setupFileHandling(): void {
     const file = e.dataTransfer?.files[0];
     if (file) handleFile(file);
   });
+
+  // Paste-to-load
+  document.addEventListener("paste", (e) => {
+    // Only paste-to-load when no file is loaded (welcome screen)
+    if (hasLoadedFile) return;
+    const text = e.clipboardData?.getData("text");
+    if (text && loadFromText(text)) {
+      e.preventDefault();
+    }
+  });
 }
+
+// ── Keyboard navigation ──
+
+function setupKeyboardNavigation(): void {
+  document.addEventListener("keydown", (e) => {
+    // Don't interfere with inputs or presentation mode
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+    if (e.target instanceof HTMLSelectElement) return;
+    if (isPresentationActive()) return;
+    if (!hasLoadedFile) return;
+
+    const viewState = getViewState(model, currentPath);
+
+    switch (e.key) {
+      case "Backspace":
+        // Go up one level
+        if (currentPath.length > 0) {
+          e.preventDefault();
+          navigateTo(currentPath.slice(0, -1));
+        }
+        break;
+
+      case "p":
+      case "P":
+        // Enter presentation mode
+        if (!e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          enterPresentation();
+        }
+        break;
+
+      case "f":
+      case "F":
+        // Zoom to fit (already handled by camera animation on navigate)
+        if (!e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          navigateTo(currentPath);
+        }
+        break;
+    }
+  });
+}
+
+// ── Init ──
 
 function init(): void {
   const container = document.getElementById("app")!;
+
+  // Apply URL hash settings before anything renders
+  applyUrlHash();
 
   // Apply system theme preference at startup
   container.dataset.theme = settings.theme;
@@ -252,7 +407,40 @@ function init(): void {
   });
   onSettingsChange(handleSettingsChange);
   setupFileHandling();
+  setupKeyboardNavigation();
 
+  // Init presentation module
+  initPresentation(navigateTo, () => model, () => currentPath);
+
+  // Check URL params for model loading
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlParam = urlParams.get("url");
+  const dslParam = urlParams.get("dsl");
+
+  if (urlParam) {
+    loadFromUrl(urlParam).then((loaded) => {
+      if (!loaded) showWelcomeAfterCLICheck();
+    });
+  } else if (dslParam) {
+    if (!loadFromBase64(dslParam)) showWelcomeAfterCLICheck();
+  } else {
+    showWelcomeAfterCLICheck();
+  }
+
+  // Listen for fullscreen exit
+  document.addEventListener("fullscreenchange", () => {
+    if (!document.fullscreenElement && isPresentationActive()) {
+      exitPresentation();
+    }
+  });
+
+  // Expose for testing (dev mode only)
+  if (import.meta.env.DEV) {
+    (window as any).__navigateTo = navigateTo;
+  }
+}
+
+function showWelcomeAfterCLICheck(): void {
   // Check if served by CLI — if so, auto-load
   autoLoadFromCLI().then((loaded) => {
     if (!loaded) {
@@ -262,11 +450,6 @@ function init(): void {
       showWelcomeScreen();
     }
   });
-
-  // Expose for testing (dev mode only)
-  if (import.meta.env.DEV) {
-    (window as any).__navigateTo = navigateTo;
-  }
 }
 
 function showWelcomeScreen(): void {
@@ -293,7 +476,7 @@ function showWelcomeScreen(): void {
           </svg>
         </div>
         <div class="welcome-drop-text">Drop a <strong>.dsl</strong> or <strong>.json</strong> workspace file here</div>
-        <div class="welcome-drop-or">or</div>
+        <div class="welcome-drop-or">or paste DSL content (Ctrl+V)</div>
         <label class="welcome-browse-btn" for="file-input">Browse files</label>
       </div>
       <div class="welcome-formats">
@@ -339,7 +522,7 @@ function connectWatchMode(): void {
     es.onmessage = async (event) => {
       const data = JSON.parse(event.data);
       if (data.type === "reload" && data.file) {
-        console.log(`♻️ File changed: ${data.file}`);
+        console.log(`File changed: ${data.file}`);
         await loadWorkspaceFromCLI(data.file);
       }
     };
@@ -445,7 +628,7 @@ function addFileSwitcher(files: WorkspaceFile[], currentFilePath: string): void 
   const closeBtn = document.createElement("button");
   closeBtn.id = "fb-close-btn";
   closeBtn.title = "Back to file list";
-  closeBtn.textContent = "✕";
+  closeBtn.textContent = "\u2715";
   closeBtn.addEventListener("click", () => {
     topBar.remove();
     showFileBrowser(files);

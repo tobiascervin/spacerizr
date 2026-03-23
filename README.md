@@ -9,10 +9,15 @@ Interactive 3D/2D C4 architecture visualizer for [Structurizr](https://structuri
 - **3D visualization** — Three.js-powered interactive scene with orbit controls, particle effects, and floating animations
 - **2D visualization** — Clean, sketch-style canvas view with pan & zoom
 - **Drill-down navigation** — Click elements to explore System > Container > Component levels
+- **Presentation mode** — Fullscreen with auto-generated slides, laser pointer, and auto-hiding toolbar
 - **SVG & PNG export** — High-quality architecture diagrams for documentation
 - **Dark & light themes** — Auto-detects system preference
 - **Structurizr DSL & JSON** — Supports both workspace formats
+- **URL loading** — Load models via `?url=` query parameter for easy sharing
+- **Paste-to-load** — Paste DSL content directly onto the welcome screen
+- **Shareable links** — Settings and navigation state serialized in URL hash
 - **Watch mode** — Auto-reloads when files change during development
+- **Keyboard shortcuts** — Navigate with keyboard, present without a mouse
 
 ## Quick Start
 
@@ -76,6 +81,72 @@ spacerizr workspace.dsl --export svg --output architecture.svg
 spacerizr workspace.dsl --export svg --theme light
 spacerizr docs/ --export svg                  # Exports all files
 ```
+
+## Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| `P` | Enter presentation mode |
+| `Backspace` | Go up one level |
+| `F` | Zoom to fit |
+| `Esc` | Exit presentation mode |
+
+### In Presentation Mode
+
+| Key | Action |
+|-----|--------|
+| `→` / `Space` / `PageDown` | Next slide |
+| `←` / `PageUp` | Previous slide |
+| `L` | Toggle laser pointer |
+| `Home` | First slide |
+| `End` | Last slide |
+| `Esc` | Exit presentation |
+
+## Presentation Mode
+
+Press `P` or click the **Fullscreen** button in the controls panel to enter presentation mode.
+
+- **Auto-generated slides** — walks through the model hierarchy (top-level → systems → containers)
+- **Auto-hiding toolbar** — appears on mouse movement, hides after 3 seconds
+- **Laser pointer** — toggle with `L` for a red cursor dot during live presentations
+- **Slide counter** — shows current position (e.g. "3 / 12")
+- **Annotations** — each slide shows the element name as a translucent overlay
+
+## URL Loading & Sharing
+
+### Load from URL
+
+Load a model directly via query parameter — perfect for sharing links or embedding:
+
+```
+https://spacerizr.app/?url=https://example.com/workspace.dsl
+```
+
+### Load from base64
+
+For small models, encode as base64:
+
+```
+https://spacerizr.app/?dsl=d29ya3NwYWNlIC...
+```
+
+### Shareable settings
+
+Settings and navigation state are serialized in the URL hash:
+
+```
+https://spacerizr.app/?url=...#theme=dark&view=2d&path=system1,container2
+```
+
+| Hash param | Values | Description |
+|-----------|--------|-------------|
+| `theme` | `light`, `dark` | Color theme |
+| `view` | `2d`, `3d` | View mode |
+| `path` | comma-separated IDs | Navigation path |
+
+### Paste to load
+
+On the welcome screen, paste DSL content directly with `Ctrl+V` / `Cmd+V`. No file needed.
 
 ## Programmatic API
 
@@ -207,10 +278,13 @@ Build and deploy as a static site where users can drop `.dsl` or `.json` files:
 
 ```bash
 npm run build
-# Deploy the `dist/` folder to any static host
+# Deploy the `dist/` folder to any static host (Vercel, Netlify, etc.)
 ```
 
-The standalone viewer shows a welcome screen with a drag-and-drop zone for loading workspace files.
+The standalone viewer shows a welcome screen with:
+- Drag-and-drop zone for loading workspace files
+- Paste-to-load support (Ctrl+V)
+- URL-based loading via `?url=` parameter
 
 ## Types
 
@@ -230,7 +304,7 @@ import type {
 ## Development
 
 ```bash
-git clone https://github.com/your-username/spacerizr.git
+git clone https://github.com/tobiascervin/spacerizr.git
 cd spacerizr
 npm install
 npm run dev          # Start dev server at localhost:5173
