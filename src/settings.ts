@@ -52,11 +52,11 @@ export interface ThemeColors {
 }
 
 const LIGHT_ELEMENTS: Record<string, { fill: string; border: string; text: string }> = {
-  person:         { fill: "#dbeafe", border: "#3b82f6", text: "#1e3a5f" },
-  softwareSystem: { fill: "#e0e7ff", border: "#6366f1", text: "#312e81" },
-  container:      { fill: "#ede9fe", border: "#8b5cf6", text: "#4c1d95" },
-  component:      { fill: "#f3e8ff", border: "#a78bfa", text: "#581c87" },
-  external:       { fill: "#f1f5f9", border: "#94a3b8", text: "#475569" },
+  person:         { fill: "#bfdbfe", border: "#2563eb", text: "#1e3a5f" },
+  softwareSystem: { fill: "#c7d2fe", border: "#4f46e5", text: "#312e81" },
+  container:      { fill: "#ddd6fe", border: "#7c3aed", text: "#4c1d95" },
+  component:      { fill: "#e9d5ff", border: "#9333ea", text: "#581c87" },
+  external:       { fill: "#e2e8f0", border: "#64748b", text: "#334155" },
 };
 
 const DARK_ELEMENTS: Record<string, { fill: string; border: string; text: string }> = {
@@ -64,7 +64,7 @@ const DARK_ELEMENTS: Record<string, { fill: string; border: string; text: string
   softwareSystem: { fill: "#2e1065", border: "#818cf8", text: "#e0e7ff" },
   container:      { fill: "#3b0764", border: "#a78bfa", text: "#ede9fe" },
   component:      { fill: "#4c1d95", border: "#c4b5fd", text: "#f3e8ff" },
-  external:       { fill: "#1e293b", border: "#64748b", text: "#e2e8f0" },
+  external:       { fill: "#2d3748", border: "#94a3b8", text: "#e2e8f0" },
 };
 
 export const THEMES: Record<string, ThemeColors> = {
