@@ -56,13 +56,20 @@ function loadModel(newModel: C4Model): void {
     show2D();
   }
 
-  // Show controls panel & breadcrumb
+  // Show controls panel, breadcrumb, dropzone, feedback
   const panel = document.getElementById("controls-panel");
   if (panel) panel.style.display = "";
   const toggle = document.getElementById("controls-toggle");
   if (toggle) toggle.style.display = "";
   const breadcrumb = document.getElementById("breadcrumb");
   if (breadcrumb) breadcrumb.style.display = "";
+  const dropzone = document.getElementById("dropzone");
+  if (dropzone) dropzone.style.display = "";
+  const feedbackBtn = document.getElementById("feedback-btn");
+  if (feedbackBtn) feedbackBtn.style.display = "";
+
+  // Set body background for theme
+  document.body.style.background = settings.theme === "dark" ? "#0f0f1a" : "#fafafa";
 
   navigateTo([]);
 }
@@ -607,6 +614,13 @@ function showWelcomeScreen(): void {
   if (toggle) toggle.style.display = "none";
   const breadcrumb = document.getElementById("breadcrumb");
   if (breadcrumb) breadcrumb.style.display = "none";
+
+  // Show feedback button on welcome screen
+  const feedbackBtn = document.getElementById("feedback-btn");
+  if (feedbackBtn) feedbackBtn.style.display = "";
+
+  // Set welcome background
+  document.body.style.background = settings.theme === "dark" ? "#0f0f1a" : "#f8f8f8";
 
   const welcome = document.createElement("div");
   welcome.id = "welcome-screen";
