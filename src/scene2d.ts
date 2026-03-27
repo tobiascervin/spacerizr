@@ -108,14 +108,18 @@ function drawArrow(
   x1: number, y1: number,
   x2: number, y2: number
 ): void {
-  const headLen = 10;
+  const headLen = 12;
+  const headWidth = Math.PI / 5;
   const angle = Math.atan2(y2 - y1, x2 - x1);
+
+  // Filled arrowhead
   c.beginPath();
   c.moveTo(x2, y2);
-  c.lineTo(x2 - headLen * Math.cos(angle - Math.PI / 6), y2 - headLen * Math.sin(angle - Math.PI / 6));
-  c.moveTo(x2, y2);
-  c.lineTo(x2 - headLen * Math.cos(angle + Math.PI / 6), y2 - headLen * Math.sin(angle + Math.PI / 6));
-  c.stroke();
+  c.lineTo(x2 - headLen * Math.cos(angle - headWidth), y2 - headLen * Math.sin(angle - headWidth));
+  c.lineTo(x2 - headLen * Math.cos(angle + headWidth), y2 - headLen * Math.sin(angle + headWidth));
+  c.closePath();
+  c.fillStyle = c.strokeStyle as string;
+  c.fill();
 }
 
 // ── 2D theme helpers ──
@@ -129,7 +133,7 @@ function getDotColor(): string {
 }
 
 function getRelLineColor(): string {
-  return settings.theme === "dark" ? "#4f46e5" : "#94a3b8";
+  return settings.theme === "dark" ? "#6366f1" : "#6366f1";
 }
 
 function getRelLabelColor(): string {
@@ -238,11 +242,13 @@ function render(): void {
     const oy = perpY * offsetAmount;
 
     ctx.strokeStyle = relColor;
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([6, 4]);
-    sketchLine(ctx, fx + ox, fy + oy, tx + ox, ty + oy, 1.0);
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = 0.7;
+    ctx.setLineDash([8, 5]);
+    sketchLine(ctx, fx + ox, fy + oy, tx + ox, ty + oy, 0.8);
     ctx.setLineDash([]);
     drawArrow(ctx, fx + ox, fy + oy, tx + ox, ty + oy);
+    ctx.globalAlpha = 1;
 
     if (rel.description && settings.showRelationshipLabels) {
       ctx.font = '11px "Inter", sans-serif';
