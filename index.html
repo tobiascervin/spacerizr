@@ -812,6 +812,234 @@
         transform: translate(-50%, -50%);
         display: none;
       }
+      /* ── Slide Editor ── */
+      #slide-editor-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        backdrop-filter: blur(4px);
+      }
+      .slide-editor-modal {
+        background: #1a1a2e;
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 12px;
+        padding: 20px 24px;
+        width: 520px;
+        max-height: 80vh;
+        display: flex;
+        flex-direction: column;
+        color: #e0e0e0;
+        font-family: "Inter", sans-serif;
+      }
+      [data-theme="light"] .slide-editor-modal {
+        background: #fff;
+        border-color: rgba(0,0,0,0.1);
+        color: #333;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+      }
+      .slide-editor-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 12px;
+      }
+      .slide-editor-header button {
+        background: none;
+        border: none;
+        color: inherit;
+        font-size: 20px;
+        cursor: pointer;
+        opacity: 0.6;
+      }
+      .slide-editor-header button:hover { opacity: 1; }
+      .slide-editor-list {
+        flex: 1;
+        overflow-y: auto;
+        max-height: 50vh;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .slide-editor-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 8px;
+        border-radius: 6px;
+        background: rgba(255,255,255,0.04);
+        cursor: grab;
+        transition: background 0.15s;
+      }
+      .slide-editor-row:hover { background: rgba(255,255,255,0.08); }
+      .slide-editor-row.dragging { opacity: 0.4; }
+      .slide-editor-row.drag-over { border-top: 2px solid #6366f1; }
+      [data-theme="light"] .slide-editor-row { background: rgba(0,0,0,0.03); }
+      [data-theme="light"] .slide-editor-row:hover { background: rgba(0,0,0,0.06); }
+      .slide-drag-handle { opacity: 0.3; font-size: 12px; cursor: grab; }
+      .slide-number { font-size: 11px; opacity: 0.4; min-width: 18px; text-align: center; }
+      .slide-annotation-input {
+        flex: 1;
+        background: transparent;
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 4px;
+        color: inherit;
+        padding: 3px 6px;
+        font-size: 12px;
+        font-family: inherit;
+      }
+      .slide-notes-input {
+        width: 120px;
+        background: transparent;
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 4px;
+        color: inherit;
+        padding: 3px 6px;
+        font-size: 11px;
+        font-family: inherit;
+        opacity: 0.5;
+      }
+      .slide-notes-input:focus { opacity: 1; }
+      [data-theme="light"] .slide-annotation-input { border-color: rgba(0,0,0,0.1); }
+      [data-theme="light"] .slide-notes-input { border-color: rgba(0,0,0,0.06); }
+      .slide-delete-btn {
+        background: none;
+        border: none;
+        color: #ef4444;
+        cursor: pointer;
+        font-size: 16px;
+        opacity: 0.4;
+        padding: 0 4px;
+      }
+      .slide-delete-btn:hover { opacity: 1; }
+      .slide-editor-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .slide-editor-btn {
+        background: rgba(99,102,241,0.1);
+        border: 1px solid rgba(99,102,241,0.3);
+        color: #818cf8;
+        padding: 6px 14px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 12px;
+        font-family: inherit;
+      }
+      .slide-editor-btn:hover { background: rgba(99,102,241,0.2); }
+      .slide-editor-footer {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 12px;
+      }
+      .slide-editor-primary {
+        background: #6366f1;
+        border: none;
+        color: #fff;
+        padding: 8px 24px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 500;
+        font-family: inherit;
+      }
+      .slide-editor-primary:hover { background: #5558e6; }
+      .slide-add-tree {
+        margin-top: 8px;
+        max-height: 200px;
+        overflow-y: auto;
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 6px;
+      }
+      .slide-tree-item {
+        padding: 6px 12px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: background 0.15s;
+      }
+      .slide-tree-item:hover { background: rgba(99,102,241,0.15); }
+
+      /* ── Presentation pointer tools ── */
+      #pres-spotlight-overlay {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 10000;
+        background: rgba(0,0,0,0.75);
+      }
+      .pres-arrow-marker {
+        position: fixed;
+        pointer-events: none;
+        z-index: 10001;
+        transform: translate(-16px, -16px);
+        transition: opacity 0.5s;
+      }
+      .pres-arrow-marker.fade-out { opacity: 0; }
+      .pres-tool-btn.active {
+        background: rgba(99,102,241,0.3) !important;
+        border-color: rgba(99,102,241,0.5) !important;
+      }
+
+      /* ── Presenter Notes Panel ── */
+      #pres-notes-panel {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 180px;
+        background: rgba(15, 15, 30, 0.95);
+        backdrop-filter: blur(12px);
+        color: #e0e0e0;
+        font-family: "Inter", sans-serif;
+        padding: 16px 24px;
+        z-index: 10002;
+        border-top: 1px solid rgba(255,255,255,0.1);
+        overflow-y: auto;
+      }
+      #pres-notes-panel .pv-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 8px;
+      }
+      #pres-notes-panel .pv-counter { font-size: 12px; opacity: 0.5; }
+      #pres-notes-panel .pv-timer { font-size: 12px; font-family: monospace; opacity: 0.5; }
+      #pres-notes-panel .pv-close {
+        margin-left: auto;
+        background: none;
+        border: none;
+        color: #e0e0e0;
+        font-size: 20px;
+        cursor: pointer;
+        opacity: 0.5;
+      }
+      #pres-notes-panel .pv-close:hover { opacity: 1; }
+      #pres-notes-panel .pv-slide-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: #818cf8;
+        margin-bottom: 6px;
+      }
+      #pres-notes-panel .pv-notes {
+        font-size: 14px;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        opacity: 0.85;
+      }
+      #pres-notes-panel .pv-next {
+        margin-top: 10px;
+        font-size: 12px;
+        opacity: 0.4;
+        border-top: 1px solid rgba(255,255,255,0.08);
+        padding-top: 8px;
+      }
+
       /* ── Copy buttons (secondary style) ── */
       .export-btn-secondary {
         font-size: 10px !important;

@@ -10,6 +10,10 @@ const hitboxMeshes: THREE.Mesh[] = [];
 let relationshipObjects: THREE.Group[] = [];
 let hoveredGroup: THREE.Group | null = null;
 
+// Spotlight state
+let spotlightIds3D: Set<string> = new Set();
+let presentationModeActive = false;
+
 // Stored scene objects for theme switching
 let sceneGround: THREE.Mesh | null = null;
 let sceneDotGrid: THREE.Points | null = null;
@@ -181,6 +185,8 @@ function createRelationship(
   labelT: number = 0.5
 ): THREE.Group {
   const group = new THREE.Group();
+  group.userData.sourceId = relationship.sourceId;
+  group.userData.destinationId = relationship.destinationId;
   const theme = getTheme();
 
   // Calculate perpendicular direction (in XZ plane) for offsetting parallel edges
@@ -274,13 +280,13 @@ export interface SceneContext {
   raycaster: THREE.Raycaster;
   mouse: THREE.Vector2;
   container: HTMLElement;
-  onElementClick: (element: C4Element) => void;
+  onElementClick: (element: C4Element, event?: MouseEvent) => void;
   onElementHover: (element: C4Element | null, event: MouseEvent) => void;
 }
 
 export function createScene(
   container: HTMLElement,
-  onElementClick: (element: C4Element) => void,
+  onElementClick: (element: C4Element, event?: MouseEvent) => void,
   onElementHover: (element: C4Element | null, event: MouseEvent) => void
 ): SceneContext {
   const theme = getTheme();
@@ -378,10 +384,13 @@ export function createScene(
     }
   });
 
-  renderer.domElement.addEventListener("click", () => {
+  renderer.domElement.addEventListener("click", (e) => {
     if (hoveredGroup) {
       const element = meshToElement.get(hoveredGroup.uuid);
-      if (element) onElementClick(element);
+      if (element) onElementClick(element, e);
+    } else if (spotlightIds3D.size > 0) {
+      // Click on empty space clears spotlight
+      clearSpotlight3D();
     }
   });
 
@@ -504,7 +513,8 @@ function animateCamera(ctx: SceneContext, nodes: LayoutNode[]): void {
 
   function step() {
     t++;
-    const progress = Math.min(t / 50, 1);
+    const frames = presentationModeActive ? 80 : 50;
+    const progress = Math.min(t / frames, 1);
     const ease = 1 - Math.pow(1 - progress, 3);
     ctx.camera.position.lerpVectors(startPos, targetPos, ease);
     ctx.controls.target.lerpVectors(startTarget, center, ease);
@@ -567,6 +577,31 @@ export function startRenderLoop(ctx: SceneContext): void {
       });
     }
 
+    // Spotlight: dim non-spotlighted elements
+    const hasSpotlight3D = spotlightIds3D.size > 0;
+    for (const [id, group] of elementToGroup) {
+      const isDimmed = hasSpotlight3D && !spotlightIds3D.has(id);
+      group.traverse((child) => {
+        if (child instanceof THREE.Mesh && child.material instanceof THREE.MeshStandardMaterial) {
+          child.material.opacity = isDimmed ? 0.12 : 0.92;
+          child.material.emissiveIntensity = (!isDimmed && hasSpotlight3D) ? 0.25 : 0;
+        }
+      });
+    }
+    // Dim relationships not connected to spotlight
+    if (hasSpotlight3D) {
+      for (const relGroup of relationshipObjects) {
+        const srcId = relGroup.userData.sourceId;
+        const dstId = relGroup.userData.destinationId;
+        const connected = spotlightIds3D.has(srcId) || spotlightIds3D.has(dstId);
+        relGroup.traverse((child) => {
+          if (child instanceof THREE.Line || child instanceof THREE.LineSegments) {
+            (child.material as THREE.LineDashedMaterial).opacity = connected ? 0.5 : 0.05;
+          }
+        });
+      }
+    }
+
     ctx.renderer.render(ctx.scene, ctx.camera);
   }
   loop();
@@ -578,4 +613,24 @@ export function show3D(ctx: SceneContext): void {
 
 export function hide3D(ctx: SceneContext): void {
   ctx.renderer.domElement.style.display = "none";
+}
+
+// ── Spotlight ──
+
+export function setSpotlight3D(ids: string[]): void {
+  spotlightIds3D = new Set(ids);
+}
+
+export function clearSpotlight3D(): void {
+  spotlightIds3D.clear();
+}
+
+export function getSpotlightIds3D(): Set<string> {
+  return spotlightIds3D;
+}
+
+// ── Presentation mode ──
+
+export function setPresentationMode(enabled: boolean): void {
+  presentationModeActive = enabled;
 }

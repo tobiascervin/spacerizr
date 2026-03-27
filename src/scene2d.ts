@@ -22,6 +22,13 @@ let lastMouse = { x: 0, y: 0 };
 let onClickCb: ((el: C4Element) => void) | null = null;
 let onHoverCb: ((el: C4Element | null, e: MouseEvent) => void) | null = null;
 
+// Spotlight state
+let spotlightIds: Set<string> = new Set();
+
+// Animation state
+let animationId: number | null = null;
+let hasRenderedOnce = false;
+
 // ── Sketch helpers ──
 
 function sketchLine(
@@ -292,9 +299,14 @@ function render(): void {
   }
 
   // Nodes
+  const hasSpotlight = spotlightIds.size > 0;
+
   for (const node of nodes) {
     const style = getElementPalette(node.element);
     const isHovered = hoveredNode === node;
+    const isDimmed = hasSpotlight && !spotlightIds.has(node.element.id);
+
+    if (isDimmed) ctx.globalAlpha = 0.15;
 
     if (node.element.type === "person") {
       const cx = node.x + node.w / 2;
@@ -349,6 +361,8 @@ function render(): void {
         ctx.fillText(desc, node.x + node.w / 2, node.y + node.h * 0.78);
       }
     }
+
+    if (isDimmed) ctx.globalAlpha = 1;
   }
 
   ctx.restore();
@@ -541,10 +555,20 @@ export function render2DView(viewState: ViewState): void {
   const centerY = canvas.clientHeight / 2;
   const avgX = nodes.reduce((s, n) => s + n.x + n.w / 2, 0) / nodes.length;
   const avgY = nodes.reduce((s, n) => s + n.y + n.h / 2, 0) / nodes.length;
-  panX = centerX - avgX * zoom;
-  panY = centerY - avgY * zoom;
+  const targetPanX = centerX - avgX * zoom;
+  const targetPanY = centerY - avgY * zoom;
 
-  render();
+  if (!hasRenderedOnce) {
+    // First render — no animation
+    panX = targetPanX;
+    panY = targetPanY;
+    hasRenderedOnce = true;
+    render();
+  } else {
+    // Smooth transition
+    render(); // render new nodes immediately at old position
+    animateTo(targetPanX, targetPanY, zoom, 350);
+  }
 }
 
 /** Re-render with current theme */
@@ -562,4 +586,51 @@ export function hide2D(): void {
 
 export function is2DReady(): boolean {
   return canvas !== null;
+}
+
+// ── Smooth animation ──
+
+export function animateTo(targetPanX: number, targetPanY: number, targetZoom: number, duration = 400): void {
+  if (!canvas) return;
+  if (animationId) cancelAnimationFrame(animationId);
+
+  const startPanX = panX;
+  const startPanY = panY;
+  const startZoom = zoom;
+  const startTime = performance.now();
+
+  function step(now: number) {
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const ease = 1 - Math.pow(1 - progress, 3); // cubic ease-out
+
+    panX = startPanX + (targetPanX - startPanX) * ease;
+    panY = startPanY + (targetPanY - startPanY) * ease;
+    zoom = startZoom + (targetZoom - startZoom) * ease;
+
+    render();
+
+    if (progress < 1) {
+      animationId = requestAnimationFrame(step);
+    } else {
+      animationId = null;
+    }
+  }
+  animationId = requestAnimationFrame(step);
+}
+
+// ── Spotlight ──
+
+export function setSpotlight(ids: string[]): void {
+  spotlightIds = new Set(ids);
+  render();
+}
+
+export function clearSpotlight(): void {
+  spotlightIds.clear();
+  render();
+}
+
+export function getSpotlightIds(): Set<string> {
+  return spotlightIds;
 }

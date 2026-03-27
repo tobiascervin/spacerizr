@@ -32,7 +32,7 @@ import { parseStructurizrDSL } from "./dsl-parser";
 import { settings, onSettingsChange, notifySettingsChange } from "./settings";
 import { createControlsPanel, updateLegendColors } from "./controls-panel";
 import { exportPNG, exportSVG, copyPNG, copySVG } from "./export";
-import { initPresentation, enterPresentation, exitPresentation, isPresentationActive } from "./presentation";
+import { initPresentation, enterPresentation, exitPresentation, isPresentationActive, openSlideEditor, toggleElementSpotlight, clearAllSpotlights } from "./presentation";
 
 let currentPath: string[] = [];
 let sceneCtx: SceneContext;
@@ -76,7 +76,12 @@ function navigateTo(path: string[]): void {
   updateUrlHash();
 }
 
-function handleElementClick(element: C4Element): void {
+function handleElementClick(element: C4Element, event?: MouseEvent): void {
+  if (isPresentationActive()) {
+    // In presentation mode: toggle spotlight instead of drilling down
+    toggleElementSpotlight(element.id, event?.shiftKey ?? false);
+    return;
+  }
   if (hasChildren(model, element.id)) {
     navigateTo([...currentPath, element.id]);
   }
