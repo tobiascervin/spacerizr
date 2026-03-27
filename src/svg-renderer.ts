@@ -218,15 +218,37 @@ function lineIntersectsRect(
   return false;
 }
 
+function clipLineToBox(
+  cx: number, cy: number, tx: number, ty: number,
+  bx: number, by: number, bw: number, bh: number
+): { x: number; y: number } {
+  const dx = tx - cx;
+  const dy = ty - cy;
+  if (dx === 0 && dy === 0) return { x: cx, y: cy };
+  let t = 1;
+  const pad = 4;
+  if (dx > 0) { const tt = (bx + bw + pad - cx) / dx; if (tt > 0 && tt < t) t = tt; }
+  if (dx < 0) { const tt = (bx - pad - cx) / dx; if (tt > 0 && tt < t) t = tt; }
+  if (dy > 0) { const tt = (by + bh + pad - cy) / dy; if (tt > 0 && tt < t) t = tt; }
+  if (dy < 0) { const tt = (by - pad - cy) / dy; if (tt > 0 && tt < t) t = tt; }
+  return { x: cx + dx * t, y: cy + dy * t };
+}
+
 function routeRelationship(
   from: { cx: number; cy: number },
   to: { cx: number; cy: number },
+  fromRect: { x: number; y: number; w: number; h: number },
+  toRect: { x: number; y: number; w: number; h: number },
   allBoxes: { x: number; y: number; w: number; h: number }[],
   desc: string | undefined,
   palette: SvgThemePalette,
   out: string[]
 ): void {
-  const fx = from.cx, fy = from.cy, tx = to.cx, ty = to.cy;
+  // Clip to box edges
+  const f = clipLineToBox(from.cx, from.cy, to.cx, to.cy, fromRect.x, fromRect.y, fromRect.w, fromRect.h);
+  const t = clipLineToBox(to.cx, to.cy, from.cx, from.cy, toRect.x, toRect.y, toRect.w, toRect.h);
+
+  const fx = f.x, fy = f.y, tx = t.x, ty = t.y;
   const dx = tx - fx;
   const dy = ty - fy;
   const len = Math.sqrt(dx * dx + dy * dy) || 1;
@@ -240,7 +262,7 @@ function routeRelationship(
   }
 
   if (!blocked) {
-    out.push(`<line x1="${r(fx)}" y1="${r(fy)}" x2="${r(tx)}" y2="${r(ty)}" stroke="${palette.relColor}" stroke-width="1.2" stroke-dasharray="5 3"/>`);
+    out.push(`<line x1="${r(fx)}" y1="${r(fy)}" x2="${r(tx)}" y2="${r(ty)}" stroke="${palette.relColor}" stroke-width="1.5" stroke-dasharray="6 4"/>`);
   } else {
     const mx = (fx + tx) / 2;
     const perpX = -dy / len;
@@ -248,14 +270,14 @@ function routeRelationship(
     const offset = Math.min(len * 0.3, 80);
     const cpx = mx + perpX * offset;
     const cpy = (fy + ty) / 2 + perpY * offset - 30;
-    out.push(`<path d="M${r(fx)},${r(fy)} Q${r(cpx)},${r(cpy)} ${r(tx)},${r(ty)}" fill="none" stroke="${palette.relColor}" stroke-width="1.2" stroke-dasharray="5 3"/>`);
+    out.push(`<path d="M${r(fx)},${r(fy)} Q${r(cpx)},${r(cpy)} ${r(tx)},${r(ty)}" fill="none" stroke="${palette.relColor}" stroke-width="1.5" stroke-dasharray="6 4"/>`);
   }
 
+  // Filled arrowhead at target
   const ux = dx / len;
   const uy = dy / len;
-  const ax = tx - ux * 14;
-  const ay = ty - uy * 14;
-  out.push(`<polygon points="${r(ax + ux * 8)},${r(ay + uy * 8)} ${r(ax - uy * 4)},${r(ay + ux * 4)} ${r(ax + uy * 4)},${r(ay - ux * 4)}" fill="${palette.relLabelColor}" opacity="0.6"/>`);
+  const headLen = 10;
+  out.push(`<polygon points="${r(tx)},${r(ty)} ${r(tx - ux * headLen - uy * 5)},${r(ty - uy * headLen + ux * 5)} ${r(tx - ux * headLen + uy * 5)},${r(ty - uy * headLen - ux * 5)}" fill="${palette.relColor}" opacity="0.8"/>`);
 
   if (desc) {
     const mx = (fx + tx) / 2;
@@ -334,24 +356,34 @@ export function renderSvgString(model: C4Model, options: RenderSvgOptions = {}):
     maxX = Math.max(maxX, b.x + b.w);
     maxY = Math.max(maxY, b.y + b.h);
   }
-  const pad = 80;
+  const pad = 40;
   const svgW = Math.round(maxX - minX + pad * 2);
-  const svgH = Math.round(maxY - minY + pad * 2) + 35;
+  const svgH = Math.round(maxY - minY + pad * 2) + 25;
   const offX = -minX + pad;
   const offY = -minY + pad;
 
   const topCenters = new Map<string, { cx: number; cy: number }>();
+  const topBoxRects = new Map<string, { x: number; y: number; w: number; h: number }>();
   const topRects: { x: number; y: number; w: number; h: number }[] = [];
   for (const b of allBoxes) {
     const bx = b.x + offX;
     const by = b.y + offY;
     topCenters.set(b.el.id, { cx: bx + b.w / 2, cy: by + b.h / 2 });
+    topBoxRects.set(b.el.id, { x: bx, y: by, w: b.w, h: b.h });
     topRects.push({ x: bx, y: by, w: b.w, h: b.h });
   }
 
   const ancestorMap = buildAncestorMap(elements);
   const drawnRels = new Set<string>();
-  const topRels: { from: { cx: number; cy: number }; to: { cx: number; cy: number }; desc?: string }[] = [];
+
+  interface RelInfo {
+    from: { cx: number; cy: number };
+    to: { cx: number; cy: number };
+    fromRect: { x: number; y: number; w: number; h: number };
+    toRect: { x: number; y: number; w: number; h: number };
+    desc?: string;
+  }
+  const topRels: RelInfo[] = [];
 
   const relationships = options.viewState ? options.viewState.visibleRelationships : model.relationships;
   for (const rel of relationships) {
@@ -365,9 +397,11 @@ export function renderSvgString(model: C4Model, options: RenderSvgOptions = {}):
 
     const from = topCenters.get(fromTop);
     const to = topCenters.get(toTop);
-    if (!from || !to) continue;
+    const fromRect = topBoxRects.get(fromTop);
+    const toRect = topBoxRects.get(toTop);
+    if (!from || !to || !fromRect || !toRect) continue;
 
-    topRels.push({ from, to, desc: rel.description });
+    topRels.push({ from, to, fromRect, toRect, desc: rel.description });
   }
 
   const out: string[] = [];
@@ -379,7 +413,7 @@ export function renderSvgString(model: C4Model, options: RenderSvgOptions = {}):
     out.push(`<defs><filter id="glow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`);
   }
 
-  for (const { from, to, desc } of topRels) {
+  for (const { from, to, fromRect, toRect, desc } of topRels) {
     const crossBoxes = topRects.filter((b) => {
       const bcx = b.x + b.w / 2;
       const bcy = b.y + b.h / 2;
@@ -387,7 +421,7 @@ export function renderSvgString(model: C4Model, options: RenderSvgOptions = {}):
       const isTo = Math.abs(bcx - to.cx) < 5 && Math.abs(bcy - to.cy) < 5;
       return !isFrom && !isTo;
     });
-    routeRelationship(from, to, crossBoxes, desc, palette, out);
+    routeRelationship(from, to, fromRect, toRect, crossBoxes, desc, palette, out);
   }
 
   for (const box of allBoxes) {
