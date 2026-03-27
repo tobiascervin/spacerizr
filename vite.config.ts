@@ -11,6 +11,7 @@ export default defineConfig(({ mode }) => {
           entry: {
             api: resolve(__dirname, "src/api.ts"),
             embed: resolve(__dirname, "src/embed.ts"),
+            "web-component": resolve(__dirname, "src/web-component.ts"),
           },
           formats: ["es"],
         },

@@ -22,3 +22,7 @@ export type { RenderSvgOptions } from "./svg-renderer";
 
 // Re-export navigation helpers
 export { getViewState, getElementName, hasChildren } from "./navigation";
+
+// Re-export validation
+export { validateModel } from "./validation";
+export type { Diagnostic } from "./validation";

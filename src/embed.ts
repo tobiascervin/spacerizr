@@ -60,6 +60,8 @@ export interface ViewerOptions {
   onElementHover?: (element: C4Element | null) => void;
 }
 
+type ViewerEvent = "navigate" | "click" | "hover" | "themeChange";
+
 export interface SpacerizrViewer {
   /** Navigate to a specific path (array of element IDs) */
   navigateTo(path: string[]): void;
@@ -73,6 +75,10 @@ export interface SpacerizrViewer {
   getPath(): string[];
   /** Get the current model */
   getModel(): C4Model;
+  /** Subscribe to events */
+  on(event: ViewerEvent, callback: Function): void;
+  /** Unsubscribe from events */
+  off(event: ViewerEvent, callback: Function): void;
   /** Destroy the viewer and clean up */
   destroy(): void;
 }
@@ -102,8 +108,15 @@ export function createViewer(
   let currentModel = model;
   let currentPath: string[] = [];
 
+  // Event emitter
+  const listeners = new Map<string, Set<Function>>();
+  function emit(event: string, ...args: any[]) {
+    for (const cb of listeners.get(event) ?? []) cb(...args);
+  }
+
   // Element interaction handlers
   const handleClick = (element: C4Element) => {
+    emit("click", element);
     if (options.onElementClick) {
       options.onElementClick(element, currentPath);
     }
@@ -113,6 +126,7 @@ export function createViewer(
   };
 
   const handleHover = (element: C4Element | null, _event: MouseEvent) => {
+    emit("hover", element);
     if (options.onElementHover) {
       options.onElementHover(element);
     }
@@ -137,6 +151,7 @@ export function createViewer(
     const viewState = getViewState(currentModel, currentPath);
     renderView(sceneCtx, viewState);
     if (is2DReady()) render2DView(viewState);
+    emit("navigate", [...currentPath]);
   }
 
   // Initial render
@@ -156,6 +171,7 @@ export function createViewer(
     setTheme(theme: "light" | "dark"): void {
       settings.theme = theme;
       container.dataset.theme = theme;
+      emit("themeChange", theme);
       applyTheme(sceneCtx);
       const viewState = getViewState(currentModel, currentPath);
       renderView(sceneCtx, viewState);
@@ -184,10 +200,19 @@ export function createViewer(
       return currentModel;
     },
 
+    on(event: ViewerEvent, callback: Function): void {
+      if (!listeners.has(event)) listeners.set(event, new Set());
+      listeners.get(event)!.add(callback);
+    },
+
+    off(event: ViewerEvent, callback: Function): void {
+      listeners.get(event)?.delete(callback);
+    },
+
     destroy(): void {
       hide3D(sceneCtx);
       hide2D();
-      // Remove canvases added by the scenes
+      listeners.clear();
       const canvases = container.querySelectorAll("canvas");
       canvases.forEach((c) => c.remove());
     },

@@ -1,7 +1,7 @@
 import { settings, notifySettingsChange, getTheme } from "./settings";
 import { enterPresentation, openSlideEditor } from "./presentation";
 
-export type ExportHandler = (format: "png" | "svg" | "copy-png" | "copy-svg") => void;
+export type ExportHandler = (format: "png" | "svg" | "copy-png" | "copy-svg" | "zip") => void;
 
 /** Create and mount the controls panel */
 export function createControlsPanel(onExport?: ExportHandler): void {
@@ -99,6 +99,12 @@ export function createControlsPanel(onExport?: ExportHandler): void {
             <span>Copy SVG</span>
           </button>
         </div>
+        <div class="control-row" style="margin-top:4px">
+          <button class="export-btn export-btn-secondary" id="export-zip" title="Export all levels as ZIP" style="width:100%">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 4h12v9a1 1 0 01-1 1H3a1 1 0 01-1-1V4z" stroke="currentColor" stroke-width="1.3"/><path d="M5 4V2h6v2" stroke="currentColor" stroke-width="1.3"/><line x1="8" y1="7" x2="8" y2="11" stroke="currentColor" stroke-width="1.3"/><polyline points="6 9 8 11 10 9" stroke="currentColor" stroke-width="1.3"/></svg>
+            <span>All Levels (ZIP)</span>
+          </button>
+        </div>
       </div>
 
       <div class="control-section">
@@ -181,6 +187,7 @@ export function createControlsPanel(onExport?: ExportHandler): void {
   document.getElementById("export-svg")!.addEventListener("click", () => onExport?.("svg"));
   document.getElementById("copy-png")!.addEventListener("click", () => onExport?.("copy-png"));
   document.getElementById("copy-svg")!.addEventListener("click", () => onExport?.("copy-svg"));
+  document.getElementById("export-zip")!.addEventListener("click", () => onExport?.("zip"));
 
   // Present buttons
   document.getElementById("present-btn")!.addEventListener("click", () => enterPresentation());

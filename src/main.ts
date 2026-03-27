@@ -1,4 +1,5 @@
 import { C4Element, C4Model } from "./types";
+import { examples } from "./examples";
 
 function escapeHtml(s: string): string {
   return s
@@ -31,7 +32,7 @@ import { parseStructurizrJSON } from "./structurizr-parser";
 import { parseStructurizrDSL } from "./dsl-parser";
 import { settings, onSettingsChange, notifySettingsChange } from "./settings";
 import { createControlsPanel, updateLegendColors } from "./controls-panel";
-import { exportPNG, exportSVG, copyPNG, copySVG } from "./export";
+import { exportPNG, exportSVG, copyPNG, copySVG, exportAllLevelsZIP } from "./export";
 import { initPresentation, enterPresentation, exitPresentation, isPresentationActive, openSlideEditor, toggleElementSpotlight, clearAllSpotlights } from "./presentation";
 
 let currentPath: string[] = [];
@@ -39,9 +40,48 @@ let sceneCtx: SceneContext;
 let model: C4Model = testModel;
 let hasLoadedFile = false;
 
+// ── Recent files ──
+
+interface RecentFile {
+  name: string;
+  content: string;
+  type: "dsl" | "json";
+  timestamp: number;
+}
+
+function saveRecent(name: string, content: string, type: "dsl" | "json"): void {
+  try {
+    const raw = localStorage.getItem("spacerizr-recent");
+    let recent: RecentFile[] = raw ? JSON.parse(raw) : [];
+    // Remove duplicate
+    recent = recent.filter((r) => r.name !== name);
+    // Add to front
+    recent.unshift({ name, content, type, timestamp: Date.now() });
+    // Max 5
+    if (recent.length > 5) recent = recent.slice(0, 5);
+    localStorage.setItem("spacerizr-recent", JSON.stringify(recent));
+  } catch { /* quota */ }
+}
+
+function getRecent(): RecentFile[] {
+  try {
+    const raw = localStorage.getItem("spacerizr-recent");
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+let lastLoadedContent = "";
+let lastLoadedName = "";
+let lastLoadedType: "dsl" | "json" = "dsl";
+
 function loadModel(newModel: C4Model): void {
   model = newModel;
   hasLoadedFile = true;
+
+  // Save to recent files
+  if (lastLoadedName) {
+    saveRecent(lastLoadedName, lastLoadedContent, lastLoadedType);
+  }
 
   // Hide welcome screen if visible
   const welcome = document.getElementById("welcome-screen");
@@ -341,6 +381,9 @@ function handleFile(file: File): void {
     try {
       const text = reader.result as string;
       const parsed = isDsl ? parseStructurizrDSL(text) : parseStructurizrJSON(text);
+      lastLoadedName = file.name;
+      lastLoadedContent = text;
+      lastLoadedType = isDsl ? "dsl" : "json";
       loadModel(parsed);
     } catch (err) {
       console.error("Failed to parse workspace:", err);
@@ -548,6 +591,8 @@ function init(): void {
       copyPNG();
     } else if (format === "copy-svg") {
       copySVG(model, currentPath);
+    } else if (format === "zip") {
+      exportAllLevelsZIP(model);
     }
   });
   onSettingsChange(handleSettingsChange);
@@ -643,9 +688,63 @@ function showWelcomeScreen(): void {
       <div class="welcome-formats">
         Supports Structurizr DSL and workspace JSON files
       </div>
+      ${renderRecentSection()}
+      <div class="welcome-section-title">Examples</div>
+      <div class="welcome-gallery" id="welcome-gallery">
+        ${examples.map((ex, i) => `
+          <button class="welcome-example-card" data-example="${i}">
+            <div class="example-card-name">${escapeHtml(ex.name)}</div>
+            <div class="example-card-desc">${escapeHtml(ex.description)}</div>
+          </button>
+        `).join("")}
+      </div>
     </div>
   `;
   document.getElementById("app")!.appendChild(welcome);
+
+  // Example click handlers
+  welcome.querySelectorAll(".welcome-example-card").forEach((card) => {
+    card.addEventListener("click", () => {
+      const idx = parseInt((card as HTMLElement).dataset.example!);
+      const ex = examples[idx];
+      lastLoadedName = ex.name + ".dsl";
+      lastLoadedContent = ex.dsl;
+      lastLoadedType = "dsl";
+      const parsed = parseStructurizrDSL(ex.dsl);
+      loadModel(parsed);
+    });
+  });
+
+  // Recent file click handlers
+  welcome.querySelectorAll(".welcome-recent-card").forEach((card) => {
+    card.addEventListener("click", () => {
+      const idx = parseInt((card as HTMLElement).dataset.recent!);
+      const recent = getRecent();
+      const r = recent[idx];
+      if (!r) return;
+      lastLoadedName = r.name;
+      lastLoadedContent = r.content;
+      lastLoadedType = r.type;
+      const parsed = r.type === "dsl" ? parseStructurizrDSL(r.content) : parseStructurizrJSON(r.content);
+      loadModel(parsed);
+    });
+  });
+}
+
+function renderRecentSection(): string {
+  const recent = getRecent();
+  if (recent.length === 0) return "";
+  return `
+    <div class="welcome-section-title">Recent</div>
+    <div class="welcome-gallery" id="welcome-recent">
+      ${recent.map((r, i) => `
+        <button class="welcome-recent-card" data-recent="${i}">
+          <div class="example-card-name">${escapeHtml(r.name)}</div>
+          <div class="example-card-desc">${new Date(r.timestamp).toLocaleDateString()}</div>
+        </button>
+      `).join("")}
+    </div>
+  `;
 }
 
 interface WorkspaceFile {

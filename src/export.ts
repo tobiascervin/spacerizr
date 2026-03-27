@@ -88,6 +88,44 @@ export async function copySVG(model: C4Model, currentPath: string[] = []): Promi
   }
 }
 
+// ── ZIP Export (all levels) ──
+
+export async function exportAllLevelsZIP(model: C4Model): Promise<void> {
+  const JSZip = (await import("jszip")).default;
+  const zip = new JSZip();
+
+  // Generate all paths (same logic as presentation slides)
+  const paths: { path: string[]; name: string }[] = [];
+  paths.push({ path: [], name: model.name });
+
+  for (const el of model.elements) {
+    if (el.children && el.children.length > 0) {
+      paths.push({ path: [el.id], name: el.name });
+      for (const child of el.children) {
+        if (child.children && child.children.length > 0) {
+          paths.push({ path: [el.id, child.id], name: child.name });
+        }
+      }
+    }
+  }
+
+  for (const p of paths) {
+    const viewState = getViewState(model, p.path);
+    const svg = renderSvgString(model, {
+      theme: settings.theme,
+      viewState,
+    });
+    if (svg) {
+      const safeName = p.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-+$/, "");
+      zip.file(`${safeName}.svg`, svg);
+    }
+  }
+
+  const blob = await zip.generateAsync({ type: "blob" });
+  const url = URL.createObjectURL(blob);
+  download(url, "spacerizr-all-levels.zip", true);
+}
+
 function showCopyFeedback(message: string): void {
   let toast = document.getElementById("copy-toast");
   if (!toast) {

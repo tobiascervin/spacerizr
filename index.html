@@ -1041,6 +1041,58 @@
         padding-top: 8px;
       }
 
+      /* ── Welcome gallery & recent ── */
+      .welcome-section-title {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        opacity: 0.4;
+        margin-top: 24px;
+        margin-bottom: 8px;
+      }
+      .welcome-gallery {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 8px;
+        width: 100%;
+      }
+      .welcome-example-card, .welcome-recent-card {
+        background: rgba(99,102,241,0.04);
+        border: 1px solid rgba(99,102,241,0.12);
+        border-radius: 8px;
+        padding: 12px;
+        cursor: pointer;
+        text-align: left;
+        font-family: inherit;
+        color: inherit;
+        transition: all 0.15s;
+      }
+      .welcome-example-card:hover, .welcome-recent-card:hover {
+        background: rgba(99,102,241,0.1);
+        border-color: rgba(99,102,241,0.3);
+      }
+      .example-card-name {
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 4px;
+      }
+      .example-card-desc {
+        font-size: 11px;
+        opacity: 0.5;
+        line-height: 1.3;
+      }
+      [data-theme="dark"] .welcome-example-card,
+      [data-theme="dark"] .welcome-recent-card {
+        background: rgba(255,255,255,0.03);
+        border-color: rgba(255,255,255,0.08);
+      }
+      [data-theme="dark"] .welcome-example-card:hover,
+      [data-theme="dark"] .welcome-recent-card:hover {
+        background: rgba(99,102,241,0.12);
+        border-color: rgba(99,102,241,0.3);
+      }
+
       /* ── Feedback button ── */
       #feedback-btn {
         position: fixed;

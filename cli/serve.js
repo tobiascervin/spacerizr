@@ -20,6 +20,9 @@ let showHelp = false;
 let watchMode = false;
 let theme = "dark";
 
+let validateMode = false;
+let allLevels = false;
+
 for (let i = 0; i < args.length; i++) {
   const arg = args[i];
   if (arg === "--help" || arg === "-h") {
@@ -34,10 +37,42 @@ for (let i = 0; i < args.length; i++) {
     watchMode = true;
   } else if (arg === "--theme" || arg === "-t") {
     theme = args[++i];
+  } else if (arg === "--validate") {
+    validateMode = true;
+  } else if (arg === "--all-levels") {
+    allLevels = true;
   } else if (!arg.startsWith("-")) {
     targetPath = arg;
   }
 }
+
+// ── Load config file ──
+
+function loadConfig(dir) {
+  const configPath = join(dir, ".spacerizr.json");
+  if (existsSync(configPath)) {
+    try {
+      const config = JSON.parse(readFileSync(configPath, "utf-8"));
+      console.log(`  📋 Using config: .spacerizr.json`);
+      return config;
+    } catch (e) {
+      console.warn(`  ⚠️  Invalid .spacerizr.json: ${e.message}`);
+    }
+  }
+  return {};
+}
+
+const configDir = targetPath ? resolve(targetPath) : process.cwd();
+const configBase = existsSync(configDir) && statSync(configDir).isDirectory() ? configDir : dirname(configDir);
+const config = loadConfig(configBase);
+
+// Merge: config < CLI flags (CLI wins)
+if (!targetPath && config.files) targetPath = configBase;
+if (port === 4777 && config.port) port = config.port;
+if (theme === "dark" && config.theme) theme = config.theme;
+if (!watchMode && config.watch) watchMode = config.watch;
+if (!exportFormat && config.export?.format) exportFormat = config.export.format;
+if (!outputPath && config.export?.output) outputPath = config.export.output;
 
 if (showHelp) {
   console.log(`
@@ -56,6 +91,8 @@ if (showHelp) {
     --output, -o   Output file path for export (default: spacerizr.svg)
     --theme, -t    Theme for export: dark or light (default: dark)
     --watch, -w    Watch for file changes and auto-reload browser
+    --validate     Validate workspace files and report errors
+    --all-levels   Export all hierarchy levels (with --export)
     --help, -h     Show this help message
 
   Examples:
@@ -173,6 +210,48 @@ if (exportFormat === "svg") {
 
   console.log(`\n  Done! ${workspaceFiles.length} file(s) exported.\n`);
   process.exit(0);
+}
+
+// ── Validate mode ──
+
+if (validateMode) {
+  const apiPath = join(__dirname, "..", "dist-lib", "api.js");
+  if (!existsSync(apiPath)) {
+    console.error("\n  ❌ Library build not found. Run 'npm run build:lib' first.\n");
+    process.exit(1);
+  }
+
+  const { parseDSL, parseJSON, validateModel } = await import(apiPath);
+  let hasErrors = false;
+
+  for (const filePath of workspaceFiles) {
+    const content = readFileSync(filePath, "utf-8");
+    const isDsl = filePath.endsWith(".dsl");
+    try {
+      const model = isDsl ? parseDSL(content) : parseJSON(content);
+      const diagnostics = validateModel(model);
+      const errors = diagnostics.filter(d => d.level === "error");
+      const warnings = diagnostics.filter(d => d.level === "warning");
+
+      if (diagnostics.length === 0) {
+        console.log(`  ✅ ${basename(filePath)} — valid`);
+      } else {
+        if (errors.length > 0) hasErrors = true;
+        console.log(`\n  📄 ${basename(filePath)}`);
+        for (const d of diagnostics) {
+          const icon = d.level === "error" ? "❌" : "⚠️";
+          console.log(`    ${icon} ${d.message}`);
+        }
+      }
+    } catch (e) {
+      hasErrors = true;
+      console.log(`\n  📄 ${basename(filePath)}`);
+      console.log(`    ❌ Parse error: ${e.message}`);
+    }
+  }
+
+  console.log();
+  process.exit(hasErrors ? 1 : 0);
 }
 
 // ── MIME types ──
