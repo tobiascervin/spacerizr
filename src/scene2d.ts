@@ -140,6 +140,43 @@ function getRelLabelColor(): string {
   return settings.theme === "dark" ? "rgba(180,190,255,0.6)" : "#64748b";
 }
 
+// ── Line clipping to box edges ──
+
+function clipToBoxEdge(fromX: number, fromY: number, toX: number, toY: number, box: Node2D): number {
+  const pt = clipLineToRect(fromX, fromY, toX, toY, box.x, box.y, box.w, box.h);
+  return pt.x;
+}
+
+function clipToBoxEdgeY(fromX: number, fromY: number, toX: number, toY: number, box: Node2D): number {
+  const pt = clipLineToRect(fromX, fromY, toX, toY, box.x, box.y, box.w, box.h);
+  return pt.y;
+}
+
+function clipLineToRect(
+  cx: number, cy: number, // center of this box (line starts here)
+  tx: number, ty: number, // target point (line goes toward this)
+  rx: number, ry: number, rw: number, rh: number // box rectangle
+): { x: number; y: number } {
+  const dx = tx - cx;
+  const dy = ty - cy;
+  if (dx === 0 && dy === 0) return { x: cx, y: cy };
+
+  // Check intersection with each edge
+  const pad = 2; // Small padding so arrow doesn't touch edge
+  let t = 1;
+
+  // Right edge
+  if (dx > 0) { const tt = (rx + rw + pad - cx) / dx; if (tt > 0 && tt < t) t = tt; }
+  // Left edge
+  if (dx < 0) { const tt = (rx - pad - cx) / dx; if (tt > 0 && tt < t) t = tt; }
+  // Bottom edge
+  if (dy > 0) { const tt = (ry + rh + pad - cy) / dy; if (tt > 0 && tt < t) t = tt; }
+  // Top edge
+  if (dy < 0) { const tt = (ry - pad - cy) / dy; if (tt > 0 && tt < t) t = tt; }
+
+  return { x: cx + dx * t, y: cy + dy * t };
+}
+
 // ── Main render ──
 
 function render(): void {
@@ -226,14 +263,14 @@ function render(): void {
     const idx = edgeIndex.get(key) ?? 0;
     edgeIndex.set(key, idx + 1);
 
-    const fx = fromNode.x + fromNode.w / 2;
-    const fy = fromNode.y + fromNode.h / 2;
-    const tx = toNode.x + toNode.w / 2;
-    const ty = toNode.y + toNode.h / 2;
+    const fcx = fromNode.x + fromNode.w / 2;
+    const fcy = fromNode.y + fromNode.h / 2;
+    const tcx = toNode.x + toNode.w / 2;
+    const tcy = toNode.y + toNode.h / 2;
 
     // Perpendicular offset for parallel edges between same pair
-    const dx = tx - fx;
-    const dy = ty - fy;
+    const dx = tcx - fcx;
+    const dy = tcy - fcy;
     const len = Math.sqrt(dx * dx + dy * dy) || 1;
     const perpX = -dy / len;
     const perpY = dx / len;
@@ -241,13 +278,19 @@ function render(): void {
     const ox = perpX * offsetAmount;
     const oy = perpY * offsetAmount;
 
+    // Clip line to box edges so arrow is visible at the border
+    const fx = clipToBoxEdge(fcx, fcy, tcx, tcy, fromNode) + ox;
+    const fy = clipToBoxEdgeY(fcx, fcy, tcx, tcy, fromNode) + oy;
+    const tx = clipToBoxEdge(tcx, tcy, fcx, fcy, toNode) + ox;
+    const ty = clipToBoxEdgeY(tcx, tcy, fcx, fcy, toNode) + oy;
+
     ctx.strokeStyle = relColor;
     ctx.lineWidth = 2;
     ctx.globalAlpha = 0.7;
     ctx.setLineDash([8, 5]);
-    sketchLine(ctx, fx + ox, fy + oy, tx + ox, ty + oy, 0.8);
+    sketchLine(ctx, fx, fy, tx, ty, 0.8);
     ctx.setLineDash([]);
-    drawArrow(ctx, fx + ox, fy + oy, tx + ox, ty + oy);
+    drawArrow(ctx, fx, fy, tx, ty);
     ctx.globalAlpha = 1;
 
     if (rel.description && settings.showRelationshipLabels) {
