@@ -26,3 +26,10 @@ export { getViewState, getElementName, hasChildren } from "./navigation";
 // Re-export validation
 export { validateModel } from "./validation";
 export type { Diagnostic } from "./validation";
+
+// Re-export renderers
+export { renderMermaid } from "./mermaid-renderer";
+export { renderPlantUML } from "./plantuml-renderer";
+
+// Re-export model utilities
+export { filterModel, mergeModels, flattenModel, getTransitiveDependencies } from "./model-utils";

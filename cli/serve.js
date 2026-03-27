@@ -87,7 +87,7 @@ if (showHelp) {
 
   Options:
     --port, -p     Port to serve on (default: 4777)
-    --export, -e   Export format: svg (headless export, then exit)
+    --export, -e   Export format: svg, mermaid, plantuml, html
     --output, -o   Output file path for export (default: spacerizr.svg)
     --theme, -t    Theme for export: dark or light (default: dark)
     --watch, -w    Watch for file changes and auto-reload browser
@@ -183,7 +183,7 @@ for (const f of workspaceFiles) {
 
 // ── Headless SVG export ──
 
-if (exportFormat === "svg") {
+if (exportFormat === "svg" || exportFormat === "mermaid" || exportFormat === "plantuml" || exportFormat === "html") {
   // Dynamic import of the bundled API (contains parsers + SVG renderer)
   const apiPath = join(__dirname, "..", "dist-lib", "api.js");
   if (!existsSync(apiPath)) {
@@ -192,19 +192,35 @@ if (exportFormat === "svg") {
     process.exit(1);
   }
 
-  const { parseDSL, parseJSON, renderSVG } = await import(apiPath);
+  const api = await import(apiPath);
+  const { parseDSL, parseJSON, renderSVG, renderMermaid, renderPlantUML } = api;
+
+  const extMap = { svg: ".svg", mermaid: ".md", plantuml: ".puml", html: ".html" };
+  const ext = extMap[exportFormat] || ".svg";
 
   for (const filePath of workspaceFiles) {
     const content = readFileSync(filePath, "utf-8");
     const isDsl = filePath.endsWith(".dsl");
     const model = isDsl ? parseDSL(content) : parseJSON(content);
-    const svg = renderSVG(model, { theme });
+
+    let output;
+    if (exportFormat === "mermaid") {
+      output = renderMermaid(model);
+    } else if (exportFormat === "plantuml") {
+      output = renderPlantUML(model);
+    } else if (exportFormat === "html") {
+      const svg = renderSVG(model, { theme });
+      const bg = theme === "dark" ? "#0f0f1a" : "#fafafa";
+      output = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${model.name}</title><style>*{margin:0;padding:0}body{background:${bg};display:flex;justify-content:center;padding:40px}</style></head><body>${svg}</body></html>`;
+    } else {
+      output = renderSVG(model, { theme });
+    }
 
     const outFile = outputPath
-      ? (workspaceFiles.length === 1 ? outputPath : join(dirname(outputPath), basename(filePath).replace(/\.(dsl|json)$/, ".svg")))
-      : basename(filePath).replace(/\.(dsl|json)$/, ".svg");
+      ? (workspaceFiles.length === 1 ? outputPath : join(dirname(outputPath), basename(filePath).replace(/\.(dsl|json)$/, ext)))
+      : basename(filePath).replace(/\.(dsl|json)$/, ext);
 
-    writeFileSync(outFile, svg);
+    writeFileSync(outFile, output);
     console.log(`  ✅ Exported: ${outFile}`);
   }
 

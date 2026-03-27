@@ -32,8 +32,10 @@ import { parseStructurizrJSON } from "./structurizr-parser";
 import { parseStructurizrDSL } from "./dsl-parser";
 import { settings, onSettingsChange, notifySettingsChange } from "./settings";
 import { createControlsPanel, updateLegendColors } from "./controls-panel";
-import { exportPNG, exportSVG, copyPNG, copySVG, exportAllLevelsZIP } from "./export";
+import { exportPNG, exportSVG, copyPNG, copySVG, exportAllLevelsZIP, copyMermaid, copyPlantUML, exportHTML } from "./export";
 import { initPresentation, enterPresentation, exitPresentation, isPresentationActive, openSlideEditor, toggleElementSpotlight, clearAllSpotlights } from "./presentation";
+import { setSpotlight, clearSpotlight } from "./scene2d";
+import { setSpotlight3D, clearSpotlight3D } from "./scene";
 
 let currentPath: string[] = [];
 let sceneCtx: SceneContext;
@@ -493,6 +495,13 @@ function setupKeyboardNavigation(): void {
       return;
     }
 
+    // Command palette
+    if (e.key === "/" || (e.key === "k" && (e.ctrlKey || e.metaKey))) {
+      e.preventDefault();
+      openCommandPalette();
+      return;
+    }
+
     if (!hasLoadedFile) return;
 
     switch (e.key) {
@@ -589,6 +598,138 @@ function closeShortcutOverlay(): void {
   document.getElementById("shortcut-overlay")?.remove();
 }
 
+// ── Command palette ──
+
+interface FlatElement {
+  element: C4Element;
+  path: string[]; // parent path to navigate to
+}
+
+function getAllElementsFlat(elements: C4Element[], parentPath: string[] = []): FlatElement[] {
+  const result: FlatElement[] = [];
+  for (const el of elements) {
+    result.push({ element: el, path: parentPath });
+    if (el.children) {
+      result.push(...getAllElementsFlat(el.children, [...parentPath, el.id]));
+    }
+  }
+  return result;
+}
+
+function openCommandPalette(): void {
+  if (document.getElementById("command-palette")) return;
+  if (!hasLoadedFile) return;
+
+  const allElements = getAllElementsFlat(model.elements);
+  let selectedIndex = 0;
+
+  const overlay = document.createElement("div");
+  overlay.id = "command-palette";
+  overlay.innerHTML = `
+    <div class="cmd-modal">
+      <input type="text" class="cmd-input" id="cmd-input" placeholder="Search elements..." autofocus />
+      <div class="cmd-results" id="cmd-results"></div>
+    </div>
+  `;
+  document.getElementById("app")!.appendChild(overlay);
+
+  const input = document.getElementById("cmd-input") as HTMLInputElement;
+  const resultsDiv = document.getElementById("cmd-results")!;
+
+  function search(query: string) {
+    const q = query.toLowerCase().trim();
+    const matches = q === ""
+      ? allElements.slice(0, 10)
+      : allElements.filter((fe) => {
+          const el = fe.element;
+          return (
+            el.name.toLowerCase().includes(q) ||
+            el.type.toLowerCase().includes(q) ||
+            (el.technology?.toLowerCase().includes(q) ?? false) ||
+            (el.description?.toLowerCase().includes(q) ?? false)
+          );
+        }).slice(0, 10);
+
+    selectedIndex = 0;
+    renderResults(matches);
+  }
+
+  function renderResults(matches: FlatElement[]) {
+    resultsDiv.innerHTML = matches.length === 0
+      ? `<div class="cmd-empty">No elements found</div>`
+      : matches.map((fe, i) => {
+          const el = fe.element;
+          const pathLabel = fe.path.length > 0
+            ? fe.path.map((id) => getElementName(model, id) ?? id).join(" › ") + " ›"
+            : "";
+          const tech = el.technology ? ` · ${el.technology}` : "";
+          return `<button class="cmd-result ${i === selectedIndex ? "selected" : ""}" data-index="${i}">
+            <span class="cmd-result-type">${el.type}</span>
+            <span class="cmd-result-name">${escapeHtml(el.name)}</span>
+            <span class="cmd-result-meta">${tech}</span>
+            ${pathLabel ? `<span class="cmd-result-path">${escapeHtml(pathLabel)}</span>` : ""}
+          </button>`;
+        }).join("");
+
+    // Click handlers
+    resultsDiv.querySelectorAll(".cmd-result").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const idx = parseInt((btn as HTMLElement).dataset.index!);
+        selectResult(matches[idx]);
+      });
+    });
+  }
+
+  function selectResult(fe: FlatElement) {
+    overlay.remove();
+    navigateTo(fe.path);
+    // Spotlight the selected element briefly
+    setSpotlight([fe.element.id]);
+    setSpotlight3D([fe.element.id]);
+    setTimeout(() => {
+      clearSpotlight();
+      clearSpotlight3D();
+    }, 3000);
+  }
+
+  input.addEventListener("input", () => search(input.value));
+
+  input.addEventListener("keydown", (e) => {
+    const results = resultsDiv.querySelectorAll(".cmd-result");
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      selectedIndex = Math.min(selectedIndex + 1, results.length - 1);
+      results.forEach((r, i) => r.classList.toggle("selected", i === selectedIndex));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      selectedIndex = Math.max(selectedIndex - 1, 0);
+      results.forEach((r, i) => r.classList.toggle("selected", i === selectedIndex));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      const matches = getAllElementsFlat(model.elements).filter((fe) => {
+        const q = input.value.toLowerCase().trim();
+        if (q === "") return true;
+        const el = fe.element;
+        return el.name.toLowerCase().includes(q) || el.type.toLowerCase().includes(q) || (el.technology?.toLowerCase().includes(q) ?? false);
+      }).slice(0, 10);
+      if (matches[selectedIndex]) selectResult(matches[selectedIndex]);
+    } else if (e.key === "Escape") {
+      overlay.remove();
+    }
+  });
+
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) overlay.remove();
+  });
+
+  // Initial search (show all)
+  search("");
+}
+
+function closeCommandPalette(): void {
+  document.getElementById("command-palette")?.remove();
+}
+
 // ── Init ──
 
 function init(): void {
@@ -620,6 +761,12 @@ function init(): void {
       copySVG(model, currentPath);
     } else if (format === "zip") {
       exportAllLevelsZIP(model);
+    } else if (format === "mermaid") {
+      copyMermaid(model, currentPath);
+    } else if (format === "plantuml") {
+      copyPlantUML(model, currentPath);
+    } else if (format === "html") {
+      exportHTML(model, currentPath);
     }
   });
   onSettingsChange(handleSettingsChange);

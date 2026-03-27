@@ -284,11 +284,16 @@ function render(): void {
     const tx = clipToBoxEdge(tcx, tcy, fcx, fcy, toNode) + ox;
     const ty = clipToBoxEdgeY(tcx, tcy, fcx, fcy, toNode) + oy;
 
-    ctx.strokeStyle = relColor;
-    ctx.lineWidth = 2;
-    ctx.globalAlpha = 0.7;
-    ctx.setLineDash([8, 5]);
-    sketchLine(ctx, fx, fy, tx, ty, 0.8);
+    // Highlight relationships connected to hovered element
+    const hovId = hoveredNode?.element.id;
+    const isRelHighlighted = hovId != null && (rel.sourceId === hovId || rel.destinationId === hovId);
+    const isRelDimmed = hovId != null && !isRelHighlighted;
+
+    ctx.strokeStyle = isRelHighlighted ? "#6366f1" : relColor;
+    ctx.lineWidth = isRelHighlighted ? 3 : 2;
+    ctx.globalAlpha = isRelDimmed ? 0.1 : isRelHighlighted ? 1 : 0.7;
+    ctx.setLineDash(isRelHighlighted ? [] : [8, 5]);
+    sketchLine(ctx, fx, fy, tx, ty, isRelHighlighted ? 0.3 : 0.8);
     ctx.setLineDash([]);
     drawArrow(ctx, fx, fy, tx, ty);
     ctx.globalAlpha = 1;

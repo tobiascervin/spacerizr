@@ -1,6 +1,9 @@
 import { C4Model, ViewState } from "./types";
 import { settings } from "./settings";
 import { renderSvgString } from "./svg-renderer";
+import { renderMermaid } from "./mermaid-renderer";
+import { renderPlantUML } from "./plantuml-renderer";
+import { exportHTML } from "./html-export";
 import { getViewState } from "./navigation";
 
 // ── Helpers ──
@@ -125,6 +128,34 @@ export async function exportAllLevelsZIP(model: C4Model): Promise<void> {
   const url = URL.createObjectURL(blob);
   download(url, "spacerizr-all-levels.zip", true);
 }
+
+// ── Mermaid / PlantUML clipboard ──
+
+export async function copyMermaid(model: C4Model, currentPath: string[] = []): Promise<void> {
+  const viewState = currentPath.length > 0 ? getViewState(model, currentPath) : undefined;
+  const text = renderMermaid(model, { viewState });
+  try {
+    await navigator.clipboard.writeText(text);
+    showCopyFeedback("Mermaid copied!");
+  } catch {
+    showCopyFeedback("Copy failed");
+  }
+}
+
+export async function copyPlantUML(model: C4Model, currentPath: string[] = []): Promise<void> {
+  const viewState = currentPath.length > 0 ? getViewState(model, currentPath) : undefined;
+  const text = renderPlantUML(model, { viewState });
+  try {
+    await navigator.clipboard.writeText(text);
+    showCopyFeedback("PlantUML copied!");
+  } catch {
+    showCopyFeedback("Copy failed");
+  }
+}
+
+// ── HTML export ──
+
+export { exportHTML };
 
 function showCopyFeedback(message: string): void {
   let toast = document.getElementById("copy-toast");

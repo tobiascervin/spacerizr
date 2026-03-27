@@ -1102,6 +1102,102 @@
         border-color: rgba(99,102,241,0.3);
       }
 
+      /* ── Command palette ── */
+      #command-palette {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        padding-top: 15vh;
+        z-index: 9999;
+        backdrop-filter: blur(4px);
+      }
+      .cmd-modal {
+        background: #1a1a2e;
+        border: 1px solid rgba(99,102,241,0.3);
+        border-radius: 12px;
+        width: 480px;
+        max-height: 400px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        box-shadow: 0 16px 48px rgba(0,0,0,0.4);
+      }
+      [data-theme="light"] .cmd-modal {
+        background: #fff;
+        border-color: rgba(99,102,241,0.2);
+        box-shadow: 0 16px 48px rgba(0,0,0,0.15);
+      }
+      .cmd-input {
+        width: 100%;
+        padding: 14px 18px;
+        background: transparent;
+        border: none;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+        color: #e0e0e0;
+        font-size: 15px;
+        font-family: inherit;
+        outline: none;
+      }
+      [data-theme="light"] .cmd-input {
+        color: #333;
+        border-bottom-color: rgba(0,0,0,0.08);
+      }
+      .cmd-input::placeholder { color: rgba(255,255,255,0.3); }
+      [data-theme="light"] .cmd-input::placeholder { color: rgba(0,0,0,0.3); }
+      .cmd-results {
+        overflow-y: auto;
+        max-height: 320px;
+        padding: 4px;
+      }
+      .cmd-result {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        padding: 8px 14px;
+        background: transparent;
+        border: none;
+        border-radius: 6px;
+        color: #e0e0e0;
+        font-family: inherit;
+        font-size: 13px;
+        text-align: left;
+        cursor: pointer;
+        transition: background 0.1s;
+      }
+      .cmd-result:hover, .cmd-result.selected {
+        background: rgba(99,102,241,0.15);
+      }
+      [data-theme="light"] .cmd-result { color: #333; }
+      [data-theme="light"] .cmd-result:hover, [data-theme="light"] .cmd-result.selected {
+        background: rgba(99,102,241,0.1);
+      }
+      .cmd-result-type {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        opacity: 0.4;
+        min-width: 70px;
+        flex-shrink: 0;
+      }
+      .cmd-result-name { font-weight: 600; }
+      .cmd-result-meta { opacity: 0.4; font-size: 12px; }
+      .cmd-result-path {
+        margin-left: auto;
+        font-size: 10px;
+        opacity: 0.3;
+        white-space: nowrap;
+      }
+      .cmd-empty {
+        padding: 20px;
+        text-align: center;
+        opacity: 0.4;
+        font-size: 13px;
+      }
+
       /* ── Feedback button ── */
       #feedback-btn {
         position: fixed;
