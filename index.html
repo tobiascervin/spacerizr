@@ -1040,6 +1040,36 @@
         padding-top: 8px;
       }
 
+      /* ── Feedback button ── */
+      #feedback-btn {
+        position: fixed;
+        bottom: 16px;
+        left: 16px;
+        z-index: 20;
+        background: rgba(99,102,241,0.1);
+        border: 1px solid rgba(99,102,241,0.2);
+        color: #818cf8;
+        padding: 6px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 12px;
+        font-family: "Inter", sans-serif;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        transition: all 0.2s;
+        text-decoration: none;
+      }
+      #feedback-btn:hover {
+        background: rgba(99,102,241,0.2);
+        border-color: rgba(99,102,241,0.4);
+      }
+      [data-theme="light"] #feedback-btn {
+        background: rgba(99,102,241,0.06);
+        border-color: rgba(99,102,241,0.15);
+        color: #6366f1;
+      }
+
       /* ── Copy buttons (secondary style) ── */
       .export-btn-secondary {
         font-size: 10px !important;
@@ -1201,6 +1231,10 @@
         <div class="drag-text">Drop .json or .dsl file here</div>
       </div>
     </div>
+    <a id="feedback-btn" href="https://github.com/tobiascervin/spacerizr/issues/new/choose" target="_blank" rel="noopener">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      Feedback
+    </a>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

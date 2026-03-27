@@ -1,0 +1,28 @@
+name: Feature Request
+description: Suggest a new feature or improvement
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: What would you like?
+      placeholder: Describe the feature or improvement...
+    validations:
+      required: true
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use case
+      placeholder: How would you use this feature? What problem does it solve?
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - 3D Viewer
+        - 2D Viewer
+        - Presentation mode
+        - Export (PNG/SVG/PPTX)
+        - CLI tool
+        - Embed API
+        - Other
