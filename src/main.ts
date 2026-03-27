@@ -171,9 +171,36 @@ function handleElementHover(
   }
 }
 
+function goHome(): void {
+  if (!hasLoadedFile) return;
+  if (!confirm("Leave current workspace and return to the welcome screen?")) return;
+  hasLoadedFile = false;
+  hide3D(sceneCtx);
+  hide2D();
+  currentPath = [];
+
+  // Remove top-bar if present (CLI mode)
+  document.getElementById("top-bar")?.remove();
+
+  showWelcomeScreen();
+}
+
 function updateBreadcrumb(): void {
   const breadcrumb = document.getElementById("breadcrumb")!;
   breadcrumb.innerHTML = "";
+
+  // Home button
+  const homeBtn = document.createElement("button");
+  homeBtn.className = "breadcrumb-home";
+  homeBtn.title = "Back to welcome screen";
+  homeBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`;
+  homeBtn.addEventListener("click", goHome);
+  breadcrumb.appendChild(homeBtn);
+
+  const sep0 = document.createElement("span");
+  sep0.className = "separator";
+  sep0.textContent = "›";
+  breadcrumb.appendChild(sep0);
 
   const rootBtn = document.createElement("button");
   rootBtn.textContent = model.name;
