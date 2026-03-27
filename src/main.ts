@@ -520,6 +520,8 @@ function init(): void {
   container.dataset.theme = settings.theme;
 
   sceneCtx = createScene(container, handleElementClick, handleElementHover);
+  // Hide everything until a file is loaded — prevents flash of dark canvas
+  hide3D(sceneCtx);
   startRenderLoop(sceneCtx);
 
   create2DScene(container, handleElementClick, handleElementHover);
@@ -542,6 +544,12 @@ function init(): void {
 
   // Shortcuts button in controls header
   document.getElementById("shortcuts-btn")?.addEventListener("click", toggleShortcutOverlay);
+
+  // Hide controls until a file is loaded — prevents flash on welcome screen
+  const panel = document.getElementById("controls-panel");
+  if (panel) panel.style.display = "none";
+  const breadcrumb = document.getElementById("breadcrumb");
+  if (breadcrumb) breadcrumb.style.display = "none";
 
   // Init presentation module
   initPresentation(navigateTo, () => model, () => currentPath);

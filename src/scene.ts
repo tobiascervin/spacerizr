@@ -299,6 +299,7 @@ export function createScene(
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.NoToneMapping;
+  renderer.domElement.style.display = "none"; // Hidden until show3D() is called
   container.appendChild(renderer.domElement);
 
   // Lighting — works for both themes
