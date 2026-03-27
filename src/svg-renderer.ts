@@ -3,7 +3,7 @@
  * No DOM dependencies — works in Node.js and browsers.
  */
 
-import { C4Element, C4Model } from "./types";
+import { C4Element, C4Model, ViewState } from "./types";
 
 // ── Theme palettes (self-contained, no settings dependency) ──
 
@@ -271,6 +271,8 @@ function routeRelationship(
 export interface RenderSvgOptions {
   /** Theme: "light" or "dark". Default: "dark" */
   theme?: "light" | "dark";
+  /** If provided, render only the visible elements/relationships from this view state */
+  viewState?: ViewState;
 }
 
 /**
@@ -278,7 +280,7 @@ export interface RenderSvgOptions {
  * Pure function — no DOM or browser dependencies.
  */
 export function renderSvgString(model: C4Model, options: RenderSvgOptions = {}): string {
-  const elements = model.elements;
+  const elements = options.viewState ? options.viewState.visibleElements : model.elements;
   if (elements.length === 0) return "";
 
   const theme = options.theme ?? "dark";
@@ -351,7 +353,8 @@ export function renderSvgString(model: C4Model, options: RenderSvgOptions = {}):
   const drawnRels = new Set<string>();
   const topRels: { from: { cx: number; cy: number }; to: { cx: number; cy: number }; desc?: string }[] = [];
 
-  for (const rel of model.relationships) {
+  const relationships = options.viewState ? options.viewState.visibleRelationships : model.relationships;
+  for (const rel of relationships) {
     const fromTop = ancestorMap.get(rel.sourceId);
     const toTop = ancestorMap.get(rel.destinationId);
     if (!fromTop || !toTop || fromTop === toTop) continue;

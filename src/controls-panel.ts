@@ -1,7 +1,7 @@
-import { settings, notifySettingsChange } from "./settings";
+import { settings, notifySettingsChange, getTheme } from "./settings";
 import { enterPresentation } from "./presentation";
 
-export type ExportHandler = (format: "png" | "svg") => void;
+export type ExportHandler = (format: "png" | "svg" | "copy-png" | "copy-svg") => void;
 
 /** Create and mount the controls panel */
 export function createControlsPanel(onExport?: ExportHandler): void {
@@ -9,6 +9,12 @@ export function createControlsPanel(onExport?: ExportHandler): void {
   panel.id = "controls-panel";
   panel.innerHTML = `
     <div class="controls-header">
+      <button id="shortcuts-btn" title="Keyboard shortcuts (?)" class="header-icon-btn">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.3"/>
+          <text x="8" y="11.5" text-anchor="middle" fill="currentColor" font-size="11" font-weight="600" font-family="Inter, sans-serif">?</text>
+        </svg>
+      </button>
       <button id="controls-toggle" title="Settings">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
           <path d="M6.5 1L7.2 3.1C7.6 3.2 8 3.4 8.3 3.6L10.3 2.7L11.8 4.2L10.9 6.2C11.1 6.5 11.3 6.9 11.4 7.3L13.5 8V10L11.4 10.7C11.3 11.1 11.1 11.5 10.9 11.8L11.8 13.8L10.3 15.3L8.3 14.4C8 14.6 7.6 14.8 7.2 14.9L6.5 17H4.5L3.8 14.9C3.4 14.8 3 14.6 2.7 14.4L0.7 15.3L-0.8 13.8L0.1 11.8C-0.1 11.5 -0.3 11.1 -0.4 10.7L-2.5 10V8L-0.4 7.3C-0.3 6.9 -0.1 6.5 0.1 6.2L-0.8 4.2L0.7 2.7L2.7 3.6C3 3.4 3.4 3.2 3.8 3.1L4.5 1H6.5Z" transform="translate(2.5, -1) scale(0.85)" stroke="currentColor" stroke-width="1.2" fill="none"/>
@@ -83,6 +89,27 @@ export function createControlsPanel(onExport?: ExportHandler): void {
             <span>SVG</span>
           </button>
         </div>
+        <div class="control-row export-row" style="margin-top:4px">
+          <button class="export-btn export-btn-secondary" id="copy-png" title="Copy PNG to clipboard">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="5" y="5" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M11 5V3.5A1.5 1.5 0 009.5 2h-6A1.5 1.5 0 002 3.5v6A1.5 1.5 0 003.5 11H5" stroke="currentColor" stroke-width="1.3"/></svg>
+            <span>Copy PNG</span>
+          </button>
+          <button class="export-btn export-btn-secondary" id="copy-svg" title="Copy SVG to clipboard">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="5" y="5" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M11 5V3.5A1.5 1.5 0 009.5 2h-6A1.5 1.5 0 002 3.5v6A1.5 1.5 0 003.5 11H5" stroke="currentColor" stroke-width="1.3"/></svg>
+            <span>Copy SVG</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="control-section">
+        <div class="section-title">Legend</div>
+        <div id="legend-panel" class="legend-panel">
+          <div class="legend-item"><span class="legend-swatch" data-type="person"></span><span>Person</span></div>
+          <div class="legend-item"><span class="legend-swatch" data-type="softwareSystem"></span><span>Software System</span></div>
+          <div class="legend-item"><span class="legend-swatch" data-type="container"></span><span>Container</span></div>
+          <div class="legend-item"><span class="legend-swatch" data-type="component"></span><span>Component</span></div>
+          <div class="legend-item"><span class="legend-swatch" data-type="external"></span><span>External</span></div>
+        </div>
       </div>
 
       <div class="control-section">
@@ -148,9 +175,27 @@ export function createControlsPanel(onExport?: ExportHandler): void {
   // Export buttons
   document.getElementById("export-png")!.addEventListener("click", () => onExport?.("png"));
   document.getElementById("export-svg")!.addEventListener("click", () => onExport?.("svg"));
+  document.getElementById("copy-png")!.addEventListener("click", () => onExport?.("copy-png"));
+  document.getElementById("copy-svg")!.addEventListener("click", () => onExport?.("copy-svg"));
 
   // Present button
   document.getElementById("present-btn")!.addEventListener("click", () => enterPresentation());
+
+  // Legend swatches — apply theme colors
+  updateLegendColors();
+}
+
+export function updateLegendColors(): void {
+  const theme = getTheme();
+  document.querySelectorAll(".legend-swatch").forEach((el) => {
+    const type = (el as HTMLElement).dataset.type!;
+    const palette = theme.element[type];
+    if (palette) {
+      // Use border color as background for better visibility in light mode
+      (el as HTMLElement).style.backgroundColor = palette.border;
+      (el as HTMLElement).style.borderColor = palette.border;
+    }
+  });
 }
 
 function bindCheckbox(id: string, onChange: (val: boolean) => void): void {

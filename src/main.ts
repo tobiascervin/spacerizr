@@ -30,8 +30,8 @@ import { testModel } from "./testdata";
 import { parseStructurizrJSON } from "./structurizr-parser";
 import { parseStructurizrDSL } from "./dsl-parser";
 import { settings, onSettingsChange, notifySettingsChange } from "./settings";
-import { createControlsPanel } from "./controls-panel";
-import { exportPNG, exportSVG } from "./export";
+import { createControlsPanel, updateLegendColors } from "./controls-panel";
+import { exportPNG, exportSVG, copyPNG, copySVG } from "./export";
 import { initPresentation, enterPresentation, exitPresentation, isPresentationActive } from "./presentation";
 
 let currentPath: string[] = [];
@@ -145,9 +145,37 @@ function updateBreadcrumb(): void {
   }
 }
 
+// ── Persistent settings ──
+
+function saveSettings(): void {
+  try {
+    localStorage.setItem("spacerizr-settings", JSON.stringify({
+      theme: settings.theme,
+      viewMode: settings.viewMode,
+      particlesEnabled: settings.particlesEnabled,
+      floatingEnabled: settings.floatingEnabled,
+      showRelationshipLabels: settings.showRelationshipLabels,
+    }));
+  } catch { /* quota exceeded or private mode */ }
+}
+
+function loadSettings(): void {
+  try {
+    const raw = localStorage.getItem("spacerizr-settings");
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    if (saved.theme === "light" || saved.theme === "dark") settings.theme = saved.theme;
+    if (saved.viewMode === "2d" || saved.viewMode === "3d") settings.viewMode = saved.viewMode;
+    if (typeof saved.particlesEnabled === "boolean") settings.particlesEnabled = saved.particlesEnabled;
+    if (typeof saved.floatingEnabled === "boolean") settings.floatingEnabled = saved.floatingEnabled;
+    if (typeof saved.showRelationshipLabels === "boolean") settings.showRelationshipLabels = saved.showRelationshipLabels;
+  } catch { /* corrupted data */ }
+}
+
 let previousTheme = settings.theme;
 
 function handleSettingsChange(): void {
+  saveSettings();
   const app = document.getElementById("app")!;
   app.dataset.view = settings.viewMode;
   app.dataset.theme = settings.theme;
@@ -156,6 +184,7 @@ function handleSettingsChange(): void {
   if (settings.theme !== previousTheme) {
     previousTheme = settings.theme;
     applyTheme(sceneCtx);
+    updateLegendColors();
     // Re-render elements with new palette
     const viewState = getViewState(model, currentPath);
     renderView(sceneCtx, viewState);
@@ -182,14 +211,22 @@ function handleSettingsChange(): void {
 
 // ── URL hash settings serialization ──
 
-function updateUrlHash(): void {
+let suppressPopState = false;
+
+function updateUrlHash(replace = false): void {
   const params: string[] = [];
   if (settings.theme !== "dark") params.push(`theme=${settings.theme}`);
   if (settings.viewMode !== "3d") params.push(`view=${settings.viewMode}`);
   if (currentPath.length > 0) params.push(`path=${currentPath.join(",")}`);
   const hash = params.length > 0 ? "#" + params.join("&") : "";
   if (window.location.hash !== hash) {
-    history.replaceState(null, "", hash || window.location.pathname + window.location.search);
+    suppressPopState = true;
+    if (replace) {
+      history.replaceState(null, "", hash || window.location.pathname + window.location.search);
+    } else {
+      history.pushState(null, "", hash || window.location.pathname + window.location.search);
+    }
+    suppressPopState = false;
   }
 }
 
@@ -230,8 +267,27 @@ function getHashPath(): string[] {
 
 // ── URL-based model loading ──
 
+function normalizeGitHubUrl(url: string): string {
+  // Convert github.com blob URLs to raw.githubusercontent.com
+  const blobMatch = url.match(
+    /^https?:\/\/github\.com\/([^/]+)\/([^/]+)\/blob\/(.+)$/
+  );
+  if (blobMatch) {
+    return `https://raw.githubusercontent.com/${blobMatch[1]}/${blobMatch[2]}/${blobMatch[3]}`;
+  }
+  // Convert gist URLs
+  const gistMatch = url.match(
+    /^https?:\/\/gist\.github\.com\/([^/]+)\/([^/]+)\/?$/
+  );
+  if (gistMatch) {
+    return `https://gist.githubusercontent.com/${gistMatch[1]}/${gistMatch[2]}/raw`;
+  }
+  return url;
+}
+
 async function loadFromUrl(url: string): Promise<boolean> {
   try {
+    url = normalizeGitHubUrl(url);
     const res = await fetch(url);
     if (!res.ok) return false;
     const text = await res.text();
@@ -347,22 +403,26 @@ function setupKeyboardNavigation(): void {
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
     if (e.target instanceof HTMLSelectElement) return;
     if (isPresentationActive()) return;
-    if (!hasLoadedFile) return;
 
-    const viewState = getViewState(model, currentPath);
+    // Shortcut overlay works even without a loaded file
+    if (e.key === "?") {
+      e.preventDefault();
+      toggleShortcutOverlay();
+      return;
+    }
+
+    if (!hasLoadedFile) return;
 
     switch (e.key) {
       case "Backspace":
-        // Go up one level
+        e.preventDefault();
         if (currentPath.length > 0) {
-          e.preventDefault();
           navigateTo(currentPath.slice(0, -1));
         }
         break;
 
       case "p":
       case "P":
-        // Enter presentation mode
         if (!e.ctrlKey && !e.metaKey) {
           e.preventDefault();
           enterPresentation();
@@ -371,14 +431,80 @@ function setupKeyboardNavigation(): void {
 
       case "f":
       case "F":
-        // Zoom to fit (already handled by camera animation on navigate)
         if (!e.ctrlKey && !e.metaKey) {
           e.preventDefault();
           navigateTo(currentPath);
         }
         break;
+
+      case "Escape":
+        closeShortcutOverlay();
+        break;
     }
   });
+
+  // Browser back/forward
+  window.addEventListener("popstate", () => {
+    if (suppressPopState) return;
+    if (!hasLoadedFile) return;
+    const hashPath = getHashPath();
+    currentPath = hashPath;
+    const viewState = getViewState(model, currentPath);
+    renderView(sceneCtx, viewState);
+    if (is2DReady()) render2DView(viewState);
+    updateBreadcrumb();
+    // Don't push a new state — we're replaying history
+    updateUrlHash(true);
+  });
+}
+
+// ── Keyboard shortcut overlay ──
+
+function toggleShortcutOverlay(): void {
+  const existing = document.getElementById("shortcut-overlay");
+  if (existing) {
+    existing.remove();
+    return;
+  }
+
+  const overlay = document.createElement("div");
+  overlay.id = "shortcut-overlay";
+  overlay.innerHTML = `
+    <div class="shortcut-modal">
+      <div class="shortcut-header">
+        <span>Keyboard Shortcuts</span>
+        <button id="shortcut-close">&times;</button>
+      </div>
+      <div class="shortcut-grid">
+        <div class="shortcut-key">?</div><div class="shortcut-desc">Show this help</div>
+        <div class="shortcut-key">P</div><div class="shortcut-desc">Enter presentation mode</div>
+        <div class="shortcut-key">F</div><div class="shortcut-desc">Zoom to fit</div>
+        <div class="shortcut-key">Backspace</div><div class="shortcut-desc">Go up one level</div>
+        <div class="shortcut-key">Click</div><div class="shortcut-desc">Drill into element</div>
+        <div class="shortcut-key">Scroll</div><div class="shortcut-desc">Zoom in/out</div>
+        <div class="shortcut-key">Drag</div><div class="shortcut-desc">Rotate (3D) / Pan (2D)</div>
+        <div class="shortcut-key">Ctrl+V</div><div class="shortcut-desc">Paste DSL content</div>
+      </div>
+      <div class="shortcut-footer">
+        <span class="shortcut-section-title">In Presentation Mode</span>
+      </div>
+      <div class="shortcut-grid">
+        <div class="shortcut-key">\u2190 \u2192</div><div class="shortcut-desc">Previous / Next slide</div>
+        <div class="shortcut-key">L</div><div class="shortcut-desc">Toggle laser pointer</div>
+        <div class="shortcut-key">Esc</div><div class="shortcut-desc">Exit presentation</div>
+      </div>
+    </div>
+  `;
+  document.getElementById("app")!.appendChild(overlay);
+
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) overlay.remove();
+  });
+  document.getElementById("shortcut-close")!.addEventListener("click", () => overlay.remove());
+}
+
+function closeShortcutOverlay(): void {
+  document.getElementById("shortcut-overlay")?.remove();
 }
 
 // ── Init ──
@@ -386,7 +512,8 @@ function setupKeyboardNavigation(): void {
 function init(): void {
   const container = document.getElementById("app")!;
 
-  // Apply URL hash settings before anything renders
+  // Load saved settings, then override with URL hash
+  loadSettings();
   applyUrlHash();
 
   // Apply system theme preference at startup
@@ -402,12 +529,19 @@ function init(): void {
     if (format === "png") {
       exportPNG();
     } else if (format === "svg") {
-      exportSVG(model);
+      exportSVG(model, currentPath);
+    } else if (format === "copy-png") {
+      copyPNG();
+    } else if (format === "copy-svg") {
+      copySVG(model, currentPath);
     }
   });
   onSettingsChange(handleSettingsChange);
   setupFileHandling();
   setupKeyboardNavigation();
+
+  // Shortcuts button in controls header
+  document.getElementById("shortcuts-btn")?.addEventListener("click", toggleShortcutOverlay);
 
   // Init presentation module
   initPresentation(navigateTo, () => model, () => currentPath);
