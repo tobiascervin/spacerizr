@@ -1475,20 +1475,32 @@
           min-width: unset !important;
           width: 100% !important;
           z-index: 200;
+          background: #0f0f1e !important;
           -webkit-overflow-scrolling: touch;
+        }
+        [data-theme="light"] .controls-body.open {
+          background: #ffffff !important;
         }
         .controls-header button { min-width: 44px; min-height: 44px; }
         #breadcrumb {
-          max-width: 55vw;
+          max-width: 60vw;
           font-size: 12px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
         }
-        #breadcrumb .crumb-segment { max-width: 100px; overflow: hidden; text-overflow: ellipsis; }
+        /* On mobile, hide all breadcrumb items except home and last button */
+        #breadcrumb .separator { display: none; }
+        #breadcrumb button { display: none; }
+        #breadcrumb button:last-child { display: inline; }
+        #breadcrumb .breadcrumb-home { display: inline-flex; }
+        #breadcrumb .breadcrumb-home + .separator { display: inline; }
         .welcome-content { padding: 24px 16px !important; }
         .welcome-dropzone { padding: 32px 16px !important; }
         .welcome-drop-or { display: none; }
+        .welcome-btn-row {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          width: 100%;
+        }
         .welcome-browse-btn {
           display: block !important;
           width: 100% !important;

@@ -473,13 +473,24 @@ function setupFileHandling(): void {
     if (file) handleFile(file);
   });
 
-  // Paste-to-load
+  // Paste-to-load (keyboard Ctrl+V)
   document.addEventListener("paste", (e) => {
-    // Only paste-to-load when no file is loaded (welcome screen)
     if (hasLoadedFile) return;
     const text = e.clipboardData?.getData("text");
     if (text && loadFromText(text)) {
       e.preventDefault();
+    }
+  });
+
+  // Paste button for mobile (uses Clipboard API)
+  document.getElementById("welcome-paste-btn")?.addEventListener("click", async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text && !loadFromText(text)) {
+        alert("Could not parse clipboard content as DSL or JSON.");
+      }
+    } catch {
+      alert("Clipboard access denied. Please copy your DSL/JSON first, then try again.");
     }
   });
 }
@@ -862,9 +873,12 @@ function showWelcomeScreen(): void {
             <line x1="12" y1="3" x2="12" y2="15"/>
           </svg>
         </div>
-        <div class="welcome-drop-text">${isTouchDevice() ? "Tap below to select a <strong>.dsl</strong> or <strong>.json</strong> file" : "Drop a <strong>.dsl</strong> or <strong>.json</strong> workspace file here"}</div>
+        <div class="welcome-drop-text">${isTouchDevice() ? "Select or paste a <strong>.dsl</strong> or <strong>.json</strong> file" : "Drop a <strong>.dsl</strong> or <strong>.json</strong> workspace file here"}</div>
         <div class="welcome-drop-or">or paste DSL content (Ctrl+V)</div>
-        <label class="welcome-browse-btn" for="file-input">${isTouchDevice() ? "Select file" : "Browse files"}</label>
+        <div class="welcome-btn-row">
+          <label class="welcome-browse-btn" for="file-input">${isTouchDevice() ? "Select file" : "Browse files"}</label>
+          ${isTouchDevice() ? '<button class="welcome-browse-btn welcome-paste-btn" id="welcome-paste-btn">Paste from clipboard</button>' : ""}
+        </div>
       </div>
       <div class="welcome-formats">
         Supports Structurizr DSL and workspace JSON files

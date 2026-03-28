@@ -182,6 +182,9 @@ export function createControlsPanel(onExport?: ExportHandler): void {
     }
   }
 
+  // Stop clicks inside the panel from reaching the backdrop
+  body.addEventListener("click", (e) => e.stopPropagation());
+
   toggleBtn.addEventListener("click", () => {
     isOpen = !isOpen;
     body.classList.toggle("open", isOpen);
