@@ -93,25 +93,55 @@ if (showHelp) {
     file-or-dir    Path to a .dsl or .json workspace file, or a directory
                    containing them. Defaults to current directory.
 
+  Commands:
+    spacerizr [file-or-dir]              Open the interactive viewer
+    spacerizr diff <old> <new>           Compare two architecture files and show
+                                         what was added, removed, or changed.
+                                         Supports .dsl and .json workspace files.
+
   Options:
     --port, -p     Port to serve on (default: 4777)
-    --export, -e   Export format: svg, mermaid, plantuml, html
-    --output, -o   Output file path for export (default: spacerizr.svg)
+    --export, -e   Export format: svg, mermaid, plantuml, html, pdf
+                     svg       — Scalable vector graphic of the current view
+                     mermaid   — Mermaid diagram syntax (clipboard-ready)
+                     plantuml  — PlantUML diagram syntax (clipboard-ready)
+                     html      — Self-contained interactive HTML with pan/zoom
+                     pdf       — Multi-page PDF with one page per hierarchy level
+    --output, -o   Output file path for export (default: spacerizr.<format>)
     --theme, -t    Theme for export: dark or light (default: dark)
-    --watch, -w    Watch for file changes and auto-reload browser
-    --validate     Validate workspace files and report errors
-    --all-levels   Export all hierarchy levels (with --export)
+    --watch, -w    Watch for file changes and auto-reload the browser
+    --validate     Validate workspace files and report structural errors
+    --all-levels   Export all hierarchy levels as separate files (with --export)
     --help, -h     Show this help message
+
+  Viewer keyboard shortcuts:
+    Arrow keys     Navigate between elements (drill down / go back)
+    Ctrl+K         Open command palette (search elements, toggle features)
+    Ctrl+Shift+E   Export current view as SVG
+    2 / 3          Switch between 2D and 3D view modes
+
+  Presentation mode:
+    Enter "Present" from the control panel or press the Present button.
+    Left/Right     Navigate between slides
+    N              Open presenter view with speaker notes and timer
+    1 / 2          Pointer tools: laser, spotlight
+    D              Toggle drawing mode (pen, highlighter, eraser)
+    T              Start/stop camera fly-through tour
+    ?              Show help overlay with all shortcuts
+    Esc            Exit presentation or current tool
 
   Examples:
     spacerizr                                  # Scan current dir, open viewer
     spacerizr workspace.dsl                    # Open specific file
     spacerizr docs/                            # Scan docs/ for .dsl/.json files
     spacerizr workspace.dsl -e svg             # Export as SVG
+    spacerizr workspace.dsl -e pdf             # Export as multi-page PDF
     spacerizr workspace.dsl -e svg -o arch.svg # Export to specific file
     spacerizr workspace.dsl -e svg -t light    # Export with light theme
     spacerizr workspace.dsl --watch            # Watch for changes
-    spacerizr docs/ -e svg                     # Export all files as SVGs
+    spacerizr docs/ -e svg --all-levels        # Export every hierarchy level
+    spacerizr diff v1.dsl v2.dsl               # Show architecture diff
+    spacerizr --validate docs/                 # Validate workspace files
 
   In your project's package.json:
     {
@@ -119,6 +149,7 @@ if (showHelp) {
         "arch": "spacerizr",
         "arch:view": "spacerizr docs/workspace.dsl",
         "arch:export": "spacerizr docs/ --export svg",
+        "arch:diff": "spacerizr diff docs/v1.dsl docs/v2.dsl",
         "arch:watch": "spacerizr docs/ --watch"
       }
     }

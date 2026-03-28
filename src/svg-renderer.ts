@@ -295,6 +295,8 @@ export interface RenderSvgOptions {
   theme?: "light" | "dark";
   /** If provided, render only the visible elements/relationships from this view state */
   viewState?: ViewState;
+  /** If true, omit the background rectangle (useful for PDF export compositing) */
+  transparent?: boolean;
 }
 
 /**
@@ -356,6 +358,39 @@ export function renderSvgString(model: C4Model, options: RenderSvgOptions = {}):
     maxX = Math.max(maxX, b.x + b.w);
     maxY = Math.max(maxY, b.y + b.h);
   }
+  // Pre-expand bbox to account for relationship label text that may extend beyond element boxes
+  const preOffX = -minX;
+  const preOffY = -minY;
+  // We need topCenters to estimate label positions, but they depend on offsets.
+  // Do a preliminary pass: compute label midpoints using raw box positions + pre-offset,
+  // then expand minX/maxX/minY/maxY accordingly.
+  {
+    const preCenters = new Map<string, { cx: number; cy: number }>();
+    for (const b of allBoxes) {
+      preCenters.set(b.el.id, { cx: b.x + b.w / 2, cy: b.y + b.h / 2 });
+    }
+    const preAncestorMap = buildAncestorMap(elements);
+    const preDrawn = new Set<string>();
+    const rels = options.viewState ? options.viewState.visibleRelationships : model.relationships;
+    for (const rel of rels) {
+      const fromTop = preAncestorMap.get(rel.sourceId);
+      const toTop = preAncestorMap.get(rel.destinationId);
+      if (!fromTop || !toTop || fromTop === toTop) continue;
+      const key = `${fromTop}:${toTop}`;
+      if (preDrawn.has(key)) continue;
+      preDrawn.add(key);
+      const from = preCenters.get(fromTop);
+      const to = preCenters.get(toTop);
+      if (!from || !to || !rel.description) continue;
+      const mx = (from.cx + to.cx) / 2;
+      const my = (from.cy + to.cy) / 2;
+      const labelW = tw(rel.description, 9) + 14;
+      minX = Math.min(minX, mx - labelW / 2 - 10);
+      maxX = Math.max(maxX, mx + labelW / 2 + 10);
+      minY = Math.min(minY, my - 15);
+      maxY = Math.max(maxY, my + 15);
+    }
+  }
   const pad = 40;
   const svgW = Math.round(maxX - minX + pad * 2);
   const svgH = Math.round(maxY - minY + pad * 2) + 25;
@@ -406,7 +441,9 @@ export function renderSvgString(model: C4Model, options: RenderSvgOptions = {}):
 
   const out: string[] = [];
   out.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}">`);
-  out.push(`<rect width="100%" height="100%" fill="${palette.bg}"/>`);
+  if (!options.transparent) {
+    out.push(`<rect width="100%" height="100%" fill="${palette.bg}"/>`);
+  }
   out.push(`<style>text { font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif; }</style>`);
 
   if (isDark) {

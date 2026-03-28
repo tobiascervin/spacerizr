@@ -983,14 +983,6 @@
         z-index: 10000;
         background: rgba(0,0,0,0.75);
       }
-      .pres-arrow-marker {
-        position: fixed;
-        pointer-events: none;
-        z-index: 10001;
-        transform: translate(-16px, -16px);
-        transition: opacity 0.5s;
-      }
-      .pres-arrow-marker.fade-out { opacity: 0; }
       .pres-tool-btn.active {
         background: rgba(99,102,241,0.3) !important;
         border-color: rgba(99,102,241,0.5) !important;
@@ -1111,6 +1103,58 @@
       }
       [data-theme="dark"] .welcome-formats {
         color: rgba(255,255,255,0.4);
+      }
+
+      /* ── Presentation help overlay ── */
+      #pres-help-overlay {
+        position: fixed; inset: 0;
+        background: rgba(0,0,0,0.6);
+        z-index: 10010;
+        display: flex; align-items: center; justify-content: center;
+        backdrop-filter: blur(4px);
+      }
+      .pres-help-content {
+        background: #1a1a2e;
+        border: 1px solid rgba(255,255,255,0.15);
+        border-radius: 12px;
+        padding: 24px 32px;
+        max-width: 560px;
+        width: 90vw;
+        color: #e0e0e0;
+        font-family: "Inter", -apple-system, sans-serif;
+      }
+      .pres-help-header {
+        display: flex; justify-content: space-between; align-items: center;
+        margin-bottom: 16px;
+        font-size: 16px; font-weight: 600;
+        color: #6366f1;
+      }
+      .pres-help-close {
+        background: none; border: none; color: #999;
+        font-size: 22px; cursor: pointer; padding: 0 4px;
+      }
+      .pres-help-close:hover { color: #fff; }
+      .pres-help-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      .pres-help-section h3 {
+        font-size: 12px; text-transform: uppercase;
+        color: #888; margin-bottom: 8px; letter-spacing: 0.5px;
+      }
+      .pres-help-row {
+        font-size: 13px; margin-bottom: 4px; line-height: 1.6;
+      }
+      .pres-help-row kbd {
+        display: inline-block;
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.15);
+        border-radius: 4px;
+        padding: 1px 6px;
+        font-size: 11px;
+        font-family: monospace;
+        margin-right: 2px;
       }
 
       /* ── Drawing toolbox ── */

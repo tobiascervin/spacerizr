@@ -67,7 +67,7 @@ export async function exportPDF(model: C4Model): Promise<void> {
 
     const page = pages[i];
     const viewState = page.path.length > 0 ? getViewState(model, page.path) : undefined;
-    const svg = renderSvgString(model, { theme: settings.theme, viewState });
+    const svg = renderSvgString(model, { theme: settings.theme, viewState, transparent: true });
     if (!svg) continue;
 
     if (i > 0) doc.addPage();

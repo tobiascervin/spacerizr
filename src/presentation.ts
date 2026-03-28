@@ -20,7 +20,7 @@ export interface Slide {
   notes?: string;
 }
 
-type PointerTool = "none" | "laser" | "spotlight" | "arrow";
+type PointerTool = "none" | "laser" | "spotlight";
 
 interface PresentationState {
   active: boolean;
@@ -32,7 +32,6 @@ interface PresentationState {
   pointerTool: PointerTool;
   laser: HTMLElement | null;
   spotlightOverlay: HTMLElement | null;
-  arrowMarkers: HTMLElement[];
   focusedElementId: string | null;
   presenterChannel: BroadcastChannel | null;
   startTime: number;
@@ -48,7 +47,6 @@ const state: PresentationState = {
   pointerTool: "none",
   laser: null,
   spotlightOverlay: null,
-  arrowMarkers: [],
   focusedElementId: null,
   presenterChannel: null,
   startTime: 0,
@@ -335,8 +333,6 @@ export function exitPresentation(): void {
   state.laser = null;
   state.spotlightOverlay?.remove();
   state.spotlightOverlay = null;
-  for (const marker of state.arrowMarkers) marker.remove();
-  state.arrowMarkers = [];
   state.pointerTool = "none";
   document.body.style.cursor = "";
   closePresenterView();
@@ -373,9 +369,6 @@ function createToolbar(): void {
       <button class="pres-btn pres-tool-btn ${state.pointerTool === "spotlight" ? "active" : ""}" id="pres-spotlight-tool" title="Spotlight (2)">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="10"/></svg>
       </button>
-      <button class="pres-btn pres-tool-btn ${state.pointerTool === "arrow" ? "active" : ""}" id="pres-arrow-tool" title="Arrow marker (3)">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-      </button>
       <div class="pres-separator"></div>
       <button class="pres-btn" id="pres-notes" title="Speaker notes (N)">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="7" y1="8" x2="17" y2="8"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="7" y1="16" x2="13" y2="16"/></svg>
@@ -406,7 +399,6 @@ function createToolbar(): void {
   document.getElementById("pres-next")!.addEventListener("click", () => nextSlide());
   document.getElementById("pres-laser")!.addEventListener("click", () => setPointerTool(state.pointerTool === "laser" ? "none" : "laser"));
   document.getElementById("pres-spotlight-tool")!.addEventListener("click", () => setPointerTool(state.pointerTool === "spotlight" ? "none" : "spotlight"));
-  document.getElementById("pres-arrow-tool")!.addEventListener("click", () => setPointerTool(state.pointerTool === "arrow" ? "none" : "arrow"));
   document.getElementById("pres-notes")!.addEventListener("click", () => openPresenterView());
   document.getElementById("pres-export-html-deck")!.addEventListener("click", () => {
     if (modelFn) exportHTMLDeck(state.slides, modelFn(), settings.theme);
@@ -450,35 +442,6 @@ function setPointerTool(tool: PointerTool): void {
 
   if (tool === "laser") document.getElementById("pres-laser")?.classList.add("active");
   if (tool === "spotlight") document.getElementById("pres-spotlight-tool")?.classList.add("active");
-  if (tool === "arrow") {
-    document.getElementById("pres-arrow-tool")?.classList.add("active");
-    document.body.style.cursor = "crosshair";
-  }
-}
-
-function placeArrowMarker(x: number, y: number): void {
-  const marker = document.createElement("div");
-  marker.className = "pres-arrow-marker";
-  marker.style.left = x + "px";
-  marker.style.top = y + "px";
-  marker.innerHTML = `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ff4444" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>`;
-  document.body.appendChild(marker);
-  state.arrowMarkers.push(marker);
-
-  // Fade out after 5s
-  setTimeout(() => {
-    marker.classList.add("fade-out");
-    setTimeout(() => {
-      marker.remove();
-      state.arrowMarkers = state.arrowMarkers.filter((m) => m !== marker);
-    }, 500);
-  }, 5000);
-
-  // Max 5 arrows
-  if (state.arrowMarkers.length > 5) {
-    const old = state.arrowMarkers.shift();
-    old?.remove();
-  }
 }
 
 // ── Speaker Notes / Presenter View ──
@@ -660,10 +623,6 @@ function handlePresentationKey(e: KeyboardEvent): void {
     case "2":
       setPointerTool(state.pointerTool === "spotlight" ? "none" : "spotlight");
       break;
-    case "3":
-      setPointerTool(state.pointerTool === "arrow" ? "none" : "arrow");
-      break;
-
     // Speaker notes
     case "n":
     case "N":
@@ -689,6 +648,11 @@ function handlePresentationKey(e: KeyboardEvent): void {
         startTour(state.slides, navigateFn, (idx) => showSlide(idx), () => {});
       }
       break;
+
+    // Help overlay
+    case "?":
+      toggleHelpOverlay();
+      break;
   }
   resetHideTimer();
 }
@@ -710,15 +674,8 @@ function handleMouseMove(e: MouseEvent): void {
   }
 }
 
-function handlePresentationClick(e: MouseEvent): void {
-  // Arrow marker tool
-  if (state.pointerTool === "arrow") {
-    placeArrowMarker(e.clientX, e.clientY);
-    return;
-  }
-
+function handlePresentationClick(_e: MouseEvent): void {
   // Element spotlight (when no pointer tool is active or using laser/spotlight)
-  // Check if we clicked on an element via the existing hit detection
   // This is handled by the scene's click handler which calls handleElementClick
   // We override behavior in presentation mode to toggle spotlight instead of drill-down
 }
@@ -740,6 +697,58 @@ export function getSlides(): Slide[] {
 
 export function getCurrentSlideIndex(): number {
   return state.currentSlide;
+}
+
+// ── Help overlay ──
+
+function toggleHelpOverlay(): void {
+  const existing = document.getElementById("pres-help-overlay");
+  if (existing) {
+    existing.remove();
+    return;
+  }
+
+  const overlay = document.createElement("div");
+  overlay.id = "pres-help-overlay";
+  overlay.innerHTML = `
+    <div class="pres-help-content">
+      <div class="pres-help-header">
+        <span>Keyboard Shortcuts</span>
+        <button class="pres-help-close" title="Close">&times;</button>
+      </div>
+      <div class="pres-help-grid">
+        <div class="pres-help-section">
+          <h3>Navigation</h3>
+          <div class="pres-help-row"><kbd>&larr;</kbd><kbd>&rarr;</kbd> Navigate slides</div>
+          <div class="pres-help-row"><kbd>Home</kbd><kbd>End</kbd> First / last slide</div>
+          <div class="pres-help-row"><kbd>Esc</kbd> Exit presentation</div>
+        </div>
+        <div class="pres-help-section">
+          <h3>Pointer Tools</h3>
+          <div class="pres-help-row"><kbd>1</kbd> Laser pointer</div>
+          <div class="pres-help-row"><kbd>2</kbd> Spotlight</div>
+        </div>
+        <div class="pres-help-section">
+          <h3>Drawing</h3>
+          <div class="pres-help-row"><kbd>D</kbd> Toggle drawing mode</div>
+          <div class="pres-help-row">Pen, highlighter, eraser tools</div>
+          <div class="pres-help-row">Drawings saved per slide</div>
+        </div>
+        <div class="pres-help-section">
+          <h3>Features</h3>
+          <div class="pres-help-row"><kbd>N</kbd> Presenter view &amp; notes</div>
+          <div class="pres-help-row"><kbd>T</kbd> Camera fly-through tour</div>
+          <div class="pres-help-row"><kbd>?</kbd> This help overlay</div>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  overlay.querySelector(".pres-help-close")!.addEventListener("click", () => overlay.remove());
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) overlay.remove();
+  });
 }
 
 /** Toggle spotlight on an element during presentation */
