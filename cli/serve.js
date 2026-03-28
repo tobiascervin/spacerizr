@@ -22,6 +22,14 @@ let theme = "dark";
 
 let validateMode = false;
 let allLevels = false;
+let diffMode = false;
+let diffFiles = [];
+
+// Check for diff mode: spacerizr diff old.dsl new.dsl
+if (args[0] === "diff") {
+  diffMode = true;
+  diffFiles = args.slice(1).filter(a => !a.startsWith("-"));
+}
 
 for (let i = 0; i < args.length; i++) {
   const arg = args[i];
@@ -268,6 +276,45 @@ if (validateMode) {
 
   console.log();
   process.exit(hasErrors ? 1 : 0);
+}
+
+// ── Diff mode ──
+
+if (diffMode) {
+  if (diffFiles.length < 2) {
+    console.error("\n  ❌ Diff requires two files: spacerizr diff old.dsl new.dsl\n");
+    process.exit(1);
+  }
+
+  const apiPath = join(__dirname, "..", "dist-lib", "api.js");
+  if (!existsSync(apiPath)) {
+    console.error("\n  ❌ Library build not found. Run 'npm run build:lib' first.\n");
+    process.exit(1);
+  }
+
+  const { parseDSL, parseJSON, diffModels, formatDiff } = await import(apiPath);
+
+  const [oldFile, newFile] = diffFiles.map(f => resolve(f));
+  for (const f of [oldFile, newFile]) {
+    if (!existsSync(f)) {
+      console.error(`  ❌ File not found: ${f}`);
+      process.exit(1);
+    }
+  }
+
+  function parseFile(filePath) {
+    const content = readFileSync(filePath, "utf-8");
+    return filePath.endsWith(".dsl") ? parseDSL(content) : parseJSON(content);
+  }
+
+  const oldModel = parseFile(oldFile);
+  const newModel = parseFile(newFile);
+  const diff = diffModels(oldModel, newModel);
+
+  console.log(`\n  📊 Diff: ${basename(oldFile)} → ${basename(newFile)}\n`);
+  console.log(formatDiff(diff));
+  console.log();
+  process.exit(0);
 }
 
 // ── MIME types ──

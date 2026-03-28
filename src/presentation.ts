@@ -9,6 +9,9 @@ import { getViewState, hasChildren, getElementName } from "./navigation";
 import { setSpotlight3D, clearSpotlight3D, getSpotlightIds3D, setPresentationMode } from "./scene";
 import { setSpotlight, clearSpotlight } from "./scene2d";
 import { exportPPTX } from "./pptx-export";
+import { exportHTMLDeck } from "./html-deck-export";
+import { activateDrawing, deactivateDrawing, destroyDrawingOverlay, setDrawSlide, isDrawingActive } from "./drawing-overlay";
+import { startTour, stopTour, isTourRunning } from "./camera-tour";
 
 export interface Slide {
   path: string[];
@@ -337,6 +340,8 @@ export function exitPresentation(): void {
   state.pointerTool = "none";
   document.body.style.cursor = "";
   closePresenterView();
+  destroyDrawingOverlay();
+  if (isTourRunning()) stopTour();
 
   if (state.hideTimeout) clearTimeout(state.hideTimeout);
   state.presenterChannel?.close();
@@ -375,6 +380,9 @@ function createToolbar(): void {
       <button class="pres-btn" id="pres-notes" title="Speaker notes (N)">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="7" y1="8" x2="17" y2="8"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="7" y1="16" x2="13" y2="16"/></svg>
       </button>
+      <button class="pres-btn" id="pres-export-html-deck" title="Export as HTML presentation">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      </button>
       <button class="pres-btn" id="pres-export-pptx" title="Export as PowerPoint">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
       </button>
@@ -400,6 +408,9 @@ function createToolbar(): void {
   document.getElementById("pres-spotlight-tool")!.addEventListener("click", () => setPointerTool(state.pointerTool === "spotlight" ? "none" : "spotlight"));
   document.getElementById("pres-arrow-tool")!.addEventListener("click", () => setPointerTool(state.pointerTool === "arrow" ? "none" : "arrow"));
   document.getElementById("pres-notes")!.addEventListener("click", () => openPresenterView());
+  document.getElementById("pres-export-html-deck")!.addEventListener("click", () => {
+    if (modelFn) exportHTMLDeck(state.slides, modelFn(), settings.theme);
+  });
   document.getElementById("pres-export-pptx")!.addEventListener("click", () => {
     if (navigateFn) exportPPTX(state.slides, navigateFn);
   });
@@ -569,6 +580,9 @@ function showSlide(index: number): void {
   clearSpotlight3D();
   clearSpotlight();
 
+  // Sync drawing overlay to current slide
+  setDrawSlide(index);
+
   // Update view mode if specified
   if (slide.viewMode && slide.viewMode !== settings.viewMode) {
     settings.viewMode = slide.viewMode;
@@ -654,6 +668,26 @@ function handlePresentationKey(e: KeyboardEvent): void {
     case "n":
     case "N":
       openPresenterView();
+      break;
+
+    // Drawing overlay
+    case "d":
+    case "D":
+      if (isDrawingActive()) {
+        deactivateDrawing();
+      } else {
+        activateDrawing();
+      }
+      break;
+
+    // Camera tour
+    case "t":
+    case "T":
+      if (isTourRunning()) {
+        stopTour();
+      } else if (navigateFn) {
+        startTour(state.slides, navigateFn, (idx) => showSlide(idx), () => {});
+      }
       break;
   }
   resetHideTimer();

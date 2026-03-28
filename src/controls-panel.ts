@@ -1,7 +1,7 @@
 import { settings, notifySettingsChange, getTheme } from "./settings";
 import { enterPresentation, openSlideEditor } from "./presentation";
 
-export type ExportHandler = (format: "png" | "svg" | "copy-png" | "copy-svg" | "zip" | "mermaid" | "plantuml" | "html") => void;
+export type ExportHandler = (format: "png" | "svg" | "copy-png" | "copy-svg" | "zip" | "mermaid" | "plantuml" | "html" | "pdf") => void;
 
 /** Create and mount the controls panel */
 export function createControlsPanel(onExport?: ExportHandler): void {
@@ -111,8 +111,13 @@ export function createControlsPanel(onExport?: ExportHandler): void {
           <button class="export-btn export-btn-secondary" id="export-html" title="Export as self-contained HTML">
             <span>HTML</span>
           </button>
-          <button class="export-btn export-btn-secondary" id="export-zip" title="Export all levels as ZIP">
-            <span>All (ZIP)</span>
+          <button class="export-btn export-btn-secondary" id="export-pdf" title="Export as multi-page PDF">
+            <span>PDF</span>
+          </button>
+        </div>
+        <div class="control-row" style="margin-top:4px">
+          <button class="export-btn export-btn-secondary" id="export-zip" title="Export all levels as ZIP" style="width:100%">
+            <span>All Levels (ZIP)</span>
           </button>
         </div>
       </div>
@@ -198,6 +203,7 @@ export function createControlsPanel(onExport?: ExportHandler): void {
   document.getElementById("copy-png")!.addEventListener("click", () => onExport?.("copy-png"));
   document.getElementById("copy-svg")!.addEventListener("click", () => onExport?.("copy-svg"));
   document.getElementById("export-zip")!.addEventListener("click", () => onExport?.("zip"));
+  document.getElementById("export-pdf")!.addEventListener("click", () => onExport?.("pdf"));
   document.getElementById("export-mermaid")!.addEventListener("click", () => onExport?.("mermaid"));
   document.getElementById("export-plantuml")!.addEventListener("click", () => onExport?.("plantuml"));
   document.getElementById("export-html")!.addEventListener("click", () => onExport?.("html"));

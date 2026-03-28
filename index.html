@@ -1113,6 +1113,42 @@
         color: rgba(255,255,255,0.4);
       }
 
+      /* ── Drawing toolbox ── */
+      #drawing-toolbox {
+        position: fixed;
+        top: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 4px;
+        background: rgba(15,15,30,0.9);
+        padding: 6px 10px;
+        border-radius: 8px;
+        border: 1px solid rgba(255,255,255,0.15);
+        z-index: 10003;
+        backdrop-filter: blur(8px);
+      }
+      .draw-tool-btn {
+        background: none;
+        border: 1px solid transparent;
+        color: #e0e0e0;
+        padding: 6px 8px;
+        border-radius: 6px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+      }
+      .draw-tool-btn:hover { background: rgba(255,255,255,0.1); }
+      .draw-tool-btn.active {
+        background: rgba(99,102,241,0.3);
+        border-color: rgba(99,102,241,0.5);
+      }
+      .draw-separator {
+        width: 1px;
+        background: rgba(255,255,255,0.15);
+        margin: 0 4px;
+      }
+
       /* ── Command palette ── */
       #command-palette {
         position: fixed;

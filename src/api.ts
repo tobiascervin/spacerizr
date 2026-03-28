@@ -33,3 +33,7 @@ export { renderPlantUML } from "./plantuml-renderer";
 
 // Re-export model utilities
 export { filterModel, mergeModels, flattenModel, getTransitiveDependencies } from "./model-utils";
+
+// Re-export diff
+export { diffModels, formatDiff } from "./diff-utils";
+export type { DiffResult } from "./diff-utils";

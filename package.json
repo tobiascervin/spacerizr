@@ -46,6 +46,7 @@
     "prepublishOnly": "npm run build:all"
   },
   "dependencies": {
+    "jspdf": "^4.2.1",
     "jszip": "^3.10.1",
     "pptxgenjs": "^4.0.1",
     "three": ">=0.150.0"

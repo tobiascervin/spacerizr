@@ -33,6 +33,7 @@ import { parseStructurizrDSL } from "./dsl-parser";
 import { settings, onSettingsChange, notifySettingsChange } from "./settings";
 import { createControlsPanel, updateLegendColors } from "./controls-panel";
 import { exportPNG, exportSVG, copyPNG, copySVG, exportAllLevelsZIP, copyMermaid, copyPlantUML, exportHTML } from "./export";
+import { exportPDF } from "./pdf-export";
 import { initPresentation, enterPresentation, exitPresentation, isPresentationActive, openSlideEditor, toggleElementSpotlight, clearAllSpotlights } from "./presentation";
 import { setSpotlight, clearSpotlight } from "./scene2d";
 import { setSpotlight3D, clearSpotlight3D } from "./scene";
@@ -767,6 +768,8 @@ function init(): void {
       copyPlantUML(model, currentPath);
     } else if (format === "html") {
       exportHTML(model, currentPath);
+    } else if (format === "pdf") {
+      exportPDF(model);
     }
   });
   onSettingsChange(handleSettingsChange);
