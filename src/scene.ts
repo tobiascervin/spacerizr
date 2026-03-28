@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { C4Element, C4Relationship, ViewState } from "./types";
+import { C4Element, C4Relationship, ViewState, getElementShape } from "./types";
 import { gridLayout, LayoutNode } from "./layout";
 import { settings, getTheme, getElementPalette } from "./settings";
 
@@ -87,32 +87,78 @@ function createElementMesh(element: C4Element): THREE.Group {
   let geometry: THREE.BufferGeometry;
   let meshYOffset = 0;
 
-  if (element.type === "person") {
-    const headGeo = new THREE.SphereGeometry(0.35, 12, 12);
-    const headMat = new THREE.MeshStandardMaterial({
-      color: fillColor,
-      roughness: 0.85,
-      metalness: 0,
-      transparent: true,
-      opacity: 0.95,
-    });
-    const head = new THREE.Mesh(headGeo, headMat);
-    head.position.y = 1.0;
-    group.add(head);
-    addSketchEdges(group, headGeo, pal.border, 1.0);
+  const shape = getElementShape(element);
 
-    geometry = new THREE.CapsuleGeometry(0.4, 0.6, 6, 12);
-    meshYOffset = 0.2;
-  } else if (
-    element.technology?.toLowerCase().includes("sql") ||
-    element.technology?.toLowerCase().includes("database") ||
-    element.technology?.toLowerCase().includes("postgres") ||
-    element.technology?.toLowerCase().includes("mysql") ||
-    element.technology?.toLowerCase().includes("redis")
-  ) {
-    geometry = new THREE.CylinderGeometry(0.75, 0.75, 1.2, 16);
-  } else {
-    geometry = new THREE.BoxGeometry(2.2, 1.0, 1.4);
+  switch (shape) {
+    case "person": {
+      const headGeo = new THREE.SphereGeometry(0.35, 12, 12);
+      const headMat = new THREE.MeshStandardMaterial({
+        color: fillColor, roughness: 0.85, metalness: 0, transparent: true, opacity: 0.95,
+      });
+      const head = new THREE.Mesh(headGeo, headMat);
+      head.position.y = 1.0;
+      group.add(head);
+      addSketchEdges(group, headGeo, pal.border, 1.0);
+      geometry = new THREE.CapsuleGeometry(0.4, 0.6, 6, 12);
+      meshYOffset = 0.2;
+      break;
+    }
+    case "database":
+      // Upright cylinder
+      geometry = new THREE.CylinderGeometry(0.75, 0.75, 1.2, 16);
+      break;
+    case "queue":
+      // Horizontal cylinder (rotated 90° on Z)
+      geometry = new THREE.CylinderGeometry(0.5, 0.5, 2.0, 16);
+      geometry.rotateZ(Math.PI / 2);
+      meshYOffset = 0.5;
+      break;
+    case "gateway": {
+      // Hexagonal prism
+      geometry = new THREE.CylinderGeometry(0.9, 0.9, 0.8, 6);
+      meshYOffset = 0.4;
+      break;
+    }
+    case "browser": {
+      // Flat wide screen shape
+      geometry = new THREE.BoxGeometry(2.4, 1.4, 0.15);
+      meshYOffset = 0.7;
+      // Screen stand
+      const standGeo = new THREE.BoxGeometry(0.15, 0.5, 0.15);
+      const standMat = new THREE.MeshStandardMaterial({ color: fillColor, roughness: 0.85, metalness: 0, transparent: true, opacity: 0.8 });
+      const stand = new THREE.Mesh(standGeo, standMat);
+      stand.position.y = 0.15;
+      group.add(stand);
+      break;
+    }
+    case "mobile": {
+      // Tall thin rectangle (phone shape)
+      geometry = new THREE.BoxGeometry(0.8, 1.5, 0.1);
+      meshYOffset = 0.75;
+      break;
+    }
+    case "cloud": {
+      // Sphere cluster approximating a cloud
+      geometry = new THREE.SphereGeometry(0.7, 12, 12);
+      meshYOffset = 0.7;
+      const cloudMat = new THREE.MeshStandardMaterial({ color: fillColor, roughness: 0.85, metalness: 0, transparent: true, opacity: 0.85 });
+      const puff1 = new THREE.Mesh(new THREE.SphereGeometry(0.5, 10, 10), cloudMat);
+      puff1.position.set(-0.6, 0.5, 0);
+      group.add(puff1);
+      const puff2 = new THREE.Mesh(new THREE.SphereGeometry(0.45, 10, 10), cloudMat);
+      puff2.position.set(0.6, 0.45, 0);
+      group.add(puff2);
+      break;
+    }
+    case "firewall": {
+      // Shield: octagonal prism
+      geometry = new THREE.CylinderGeometry(0.8, 0.6, 1.2, 8);
+      meshYOffset = 0.1;
+      break;
+    }
+    default:
+      geometry = new THREE.BoxGeometry(2.2, 1.0, 1.4);
+      break;
   }
 
   const material = new THREE.MeshStandardMaterial({
@@ -300,8 +346,8 @@ export function createScene(
   camera.lookAt(0, 0, 0);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
-  renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.NoToneMapping;

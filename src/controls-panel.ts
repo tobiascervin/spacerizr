@@ -152,16 +152,45 @@ export function createControlsPanel(onExport?: ExportHandler): void {
   document.getElementById("app")!.appendChild(panel);
 
   // Toggle panel open/close — open by default
-  let isOpen = true;
+  const isMobile = window.matchMedia("(max-width: 640px)").matches;
+  let isOpen = !isMobile; // Start closed on mobile
   const body = document.getElementById("controls-body")!;
   const toggleBtn = document.getElementById("controls-toggle")!;
-  body.classList.add("open");
-  toggleBtn.classList.add("active");
+  if (isOpen) {
+    body.classList.add("open");
+    toggleBtn.classList.add("active");
+  }
+
+  // Backdrop for mobile bottom sheet
+  let backdrop: HTMLElement | null = null;
+  function toggleBackdrop(show: boolean): void {
+    if (!window.matchMedia("(max-width: 640px)").matches) {
+      backdrop?.remove();
+      backdrop = null;
+      return;
+    }
+    if (show && !backdrop) {
+      backdrop = document.createElement("div");
+      backdrop.id = "controls-backdrop";
+      backdrop.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:199;";
+      document.body.appendChild(backdrop);
+      backdrop.addEventListener("click", () => {
+        isOpen = false;
+        body.classList.remove("open");
+        toggleBtn.classList.remove("active");
+        toggleBackdrop(false);
+      });
+    } else if (!show && backdrop) {
+      backdrop.remove();
+      backdrop = null;
+    }
+  }
 
   toggleBtn.addEventListener("click", () => {
     isOpen = !isOpen;
     body.classList.toggle("open", isOpen);
     toggleBtn.classList.toggle("active", isOpen);
+    toggleBackdrop(isOpen);
   });
 
   // View mode toggle

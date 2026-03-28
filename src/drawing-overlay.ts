@@ -77,6 +77,9 @@ export function activateDrawing(): void {
   state.canvas!.addEventListener("mousedown", handleDown);
   state.canvas!.addEventListener("mousemove", handleMove);
   state.canvas!.addEventListener("mouseup", handleUp);
+  state.canvas!.addEventListener("touchstart", handleTouchDown, { passive: false });
+  state.canvas!.addEventListener("touchmove", handleTouchMove, { passive: false });
+  state.canvas!.addEventListener("touchend", handleTouchUp);
 
   showToolbox();
 }
@@ -88,6 +91,9 @@ export function deactivateDrawing(): void {
     state.canvas.removeEventListener("mousedown", handleDown);
     state.canvas.removeEventListener("mousemove", handleMove);
     state.canvas.removeEventListener("mouseup", handleUp);
+    state.canvas.removeEventListener("touchstart", handleTouchDown);
+    state.canvas.removeEventListener("touchmove", handleTouchMove);
+    state.canvas.removeEventListener("touchend", handleTouchUp);
   }
   hideToolbox();
 }
@@ -174,6 +180,26 @@ function eraseAt(x: number, y: number): void {
     state.pathsBySlide.set(state.currentSlide, filtered);
     redraw();
   }
+}
+
+// ── Touch adapters ──
+
+function handleTouchDown(e: TouchEvent): void {
+  e.preventDefault();
+  if (e.touches.length === 1) {
+    handleDown({ clientX: e.touches[0].clientX, clientY: e.touches[0].clientY, buttons: 1 } as MouseEvent);
+  }
+}
+
+function handleTouchMove(e: TouchEvent): void {
+  e.preventDefault();
+  if (e.touches.length === 1) {
+    handleMove({ clientX: e.touches[0].clientX, clientY: e.touches[0].clientY, buttons: 1 } as MouseEvent);
+  }
+}
+
+function handleTouchUp(): void {
+  handleUp();
 }
 
 // ── Rendering ──

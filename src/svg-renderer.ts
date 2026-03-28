@@ -3,7 +3,7 @@
  * No DOM dependencies — works in Node.js and browsers.
  */
 
-import { C4Element, C4Model, ViewState } from "./types";
+import { C4Element, C4Model, ViewState, getElementShape, C4Shape } from "./types";
 
 // ── Theme palettes (self-contained, no settings dependency) ──
 
@@ -164,12 +164,14 @@ function drawBox(box: Box, ox: number, oy: number, out: string[], isDark: boolea
   }
 
   const cornerR = hasKids ? 12 : 8;
+  const shape = getElementShape(box.el);
+
   if (hasKids) {
     const opacity = box.depth === 0 ? "0.12" : "0.18";
     out.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${cornerR}" fill="${fill}" fill-opacity="${opacity}" stroke="${border}" stroke-width="1.5" stroke-dasharray="6 4"/>`);
   } else {
-    out.push(`<rect x="${x + 2}" y="${y + 2}" width="${w}" height="${h}" rx="${cornerR}" fill="${isDark ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.08)'}" />`);
-    out.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${cornerR}" fill="${fill}" stroke="${border}" stroke-width="1.5"/>`);
+    out.push(svgShapeShadow(shape, x, y, w, h, cornerR, isDark));
+    out.push(svgShape(shape, x, y, w, h, cornerR, fill, border));
   }
 
   const cx = r(x + w / 2);
@@ -188,6 +190,74 @@ function drawBox(box: Box, ox: number, oy: number, out: string[], isDark: boolea
 
   for (const kid of box.kids) {
     drawBox(kid, x, y, out, isDark, palette);
+  }
+}
+
+function svgShapeShadow(shape: C4Shape, x: number, y: number, w: number, h: number, rx: number, isDark: boolean): string {
+  const shadowFill = isDark ? "rgba(0,0,0,0.3)" : "rgba(0,0,0,0.08)";
+  if (shape === "database") {
+    const ry = h * 0.12;
+    return `<ellipse cx="${r(x + w / 2 + 2)}" cy="${r(y + ry + 2)}" rx="${r(w / 2)}" ry="${r(ry)}" fill="${shadowFill}"/>`;
+  }
+  if (shape === "cloud") return "";
+  if (shape === "gateway") {
+    return `<rect x="${x + 2}" y="${y + 2}" width="${w}" height="${h}" rx="${rx}" fill="${shadowFill}" />`;
+  }
+  return `<rect x="${x + 2}" y="${y + 2}" width="${w}" height="${h}" rx="${rx}" fill="${shadowFill}" />`;
+}
+
+function svgShape(shape: C4Shape, x: number, y: number, w: number, h: number, rx: number, fill: string, border: string): string {
+  switch (shape) {
+    case "database": {
+      const ry = h * 0.12;
+      return [
+        `<path d="M${x},${r(y + ry)} L${x},${r(y + h - ry)}" stroke="${border}" stroke-width="1.5" fill="none"/>`,
+        `<path d="M${x + w},${r(y + ry)} L${x + w},${r(y + h - ry)}" stroke="${border}" stroke-width="1.5" fill="none"/>`,
+        `<ellipse cx="${r(x + w / 2)}" cy="${r(y + h - ry)}" rx="${r(w / 2)}" ry="${r(ry)}" fill="${fill}" stroke="${border}" stroke-width="1.5"/>`,
+        `<rect x="${x}" y="${r(y + ry)}" width="${w}" height="${r(h - ry * 2)}" fill="${fill}"/>`,
+        `<ellipse cx="${r(x + w / 2)}" cy="${r(y + ry)}" rx="${r(w / 2)}" ry="${r(ry)}" fill="${fill}" stroke="${border}" stroke-width="1.5"/>`,
+      ].join("");
+    }
+    case "queue": {
+      const qrx = w * 0.1;
+      return `<rect x="${r(x + qrx)}" y="${y}" width="${r(w - qrx * 2)}" height="${h}" fill="${fill}"/>` +
+        `<ellipse cx="${r(x + qrx)}" cy="${r(y + h / 2)}" rx="${r(qrx)}" ry="${r(h / 2)}" fill="${fill}" stroke="${border}" stroke-width="1.5"/>` +
+        `<ellipse cx="${r(x + w - qrx)}" cy="${r(y + h / 2)}" rx="${r(qrx)}" ry="${r(h / 2)}" fill="${fill}" stroke="${border}" stroke-width="1.5"/>` +
+        `<line x1="${r(x + qrx)}" y1="${y}" x2="${r(x + w - qrx)}" y2="${y}" stroke="${border}" stroke-width="1.5"/>` +
+        `<line x1="${r(x + qrx)}" y1="${r(y + h)}" x2="${r(x + w - qrx)}" y2="${r(y + h)}" stroke="${border}" stroke-width="1.5"/>`;
+    }
+    case "gateway": {
+      const cx = x + w / 2, cy = y + h / 2;
+      const hrx = w / 2, hry = h / 2;
+      const pts = Array.from({ length: 6 }, (_, i) => {
+        const a = (Math.PI / 3) * i - Math.PI / 6;
+        return `${r(cx + hrx * Math.cos(a))},${r(cy + hry * Math.sin(a))}`;
+      }).join(" ");
+      return `<polygon points="${pts}" fill="${fill}" stroke="${border}" stroke-width="1.5"/>`;
+    }
+    case "browser":
+      return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${fill}" stroke="${border}" stroke-width="1.5"/>` +
+        `<line x1="${x}" y1="${r(y + h * 0.18)}" x2="${r(x + w)}" y2="${r(y + h * 0.18)}" stroke="${border}" stroke-width="1" opacity="0.5"/>` +
+        `<circle cx="${r(x + 8)}" cy="${r(y + h * 0.09)}" r="2" fill="${border}" opacity="0.3"/>` +
+        `<circle cx="${r(x + 16)}" cy="${r(y + h * 0.09)}" r="2" fill="${border}" opacity="0.3"/>` +
+        `<circle cx="${r(x + 24)}" cy="${r(y + h * 0.09)}" r="2" fill="${border}" opacity="0.3"/>`;
+    case "mobile":
+      return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="10" fill="${fill}" stroke="${border}" stroke-width="1.5"/>` +
+        `<circle cx="${r(x + w / 2)}" cy="${r(y + h - 8)}" r="3" fill="none" stroke="${border}" stroke-width="1"/>`;
+    case "cloud": {
+      const ccx = x + w / 2, ccy = y + h * 0.55;
+      return `<circle cx="${r(ccx)}" cy="${r(ccy)}" r="${r(h * 0.28)}" fill="${fill}" stroke="${border}" stroke-width="1.5"/>` +
+        `<circle cx="${r(ccx - w * 0.22)}" cy="${r(ccy + h * 0.05)}" r="${r(h * 0.22)}" fill="${fill}" stroke="${border}" stroke-width="1"/>` +
+        `<circle cx="${r(ccx + w * 0.22)}" cy="${r(ccy + h * 0.05)}" r="${r(h * 0.22)}" fill="${fill}" stroke="${border}" stroke-width="1"/>` +
+        `<circle cx="${r(ccx - w * 0.1)}" cy="${r(ccy - h * 0.15)}" r="${r(h * 0.2)}" fill="${fill}" stroke="${border}" stroke-width="1"/>` +
+        `<circle cx="${r(ccx + w * 0.12)}" cy="${r(ccy - h * 0.12)}" r="${r(h * 0.18)}" fill="${fill}" stroke="${border}" stroke-width="1"/>`;
+    }
+    case "firewall": {
+      const scx = x + w / 2;
+      return `<path d="M${r(scx)},${y} L${r(x + w)},${r(y + h * 0.2)} L${r(x + w)},${r(y + h * 0.55)} Q${r(x + w)},${r(y + h * 0.85)} ${r(scx)},${r(y + h)} Q${x},${r(y + h * 0.85)} ${x},${r(y + h * 0.55)} L${x},${r(y + h * 0.2)} Z" fill="${fill}" stroke="${border}" stroke-width="1.5"/>`;
+    }
+    default:
+      return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${fill}" stroke="${border}" stroke-width="1.5"/>`;
   }
 }
 

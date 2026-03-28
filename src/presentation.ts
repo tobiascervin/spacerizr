@@ -300,6 +300,8 @@ export function enterPresentation(): void {
   document.addEventListener("keydown", handlePresentationKey);
   document.addEventListener("mousemove", handleMouseMove);
   document.addEventListener("click", handlePresentationClick);
+  document.addEventListener("touchstart", handleTouchStart, { passive: false });
+  document.addEventListener("touchend", handleTouchEnd);
 
   // BroadcastChannel for presenter view
   state.presenterChannel = new BroadcastChannel("spacerizr-presentation");
@@ -346,6 +348,8 @@ export function exitPresentation(): void {
   document.removeEventListener("keydown", handlePresentationKey);
   document.removeEventListener("mousemove", handleMouseMove);
   document.removeEventListener("click", handlePresentationClick);
+  document.removeEventListener("touchstart", handleTouchStart);
+  document.removeEventListener("touchend", handleTouchEnd);
 }
 
 // ── Toolbar ──
@@ -671,6 +675,41 @@ function handleMouseMove(e: MouseEvent): void {
   if (state.pointerTool === "spotlight" && state.spotlightOverlay) {
     state.spotlightOverlay.style.background =
       `radial-gradient(circle 100px at ${e.clientX}px ${e.clientY}px, transparent 0%, rgba(0,0,0,0.75) 100%)`;
+  }
+}
+
+// ── Touch / swipe navigation ──
+
+let swipeStartX = 0;
+let swipeStartY = 0;
+let swipeStartTime = 0;
+
+function handleTouchStart(e: TouchEvent): void {
+  if (e.touches.length === 1) {
+    swipeStartX = e.touches[0].clientX;
+    swipeStartY = e.touches[0].clientY;
+    swipeStartTime = Date.now();
+  }
+}
+
+function handleTouchEnd(e: TouchEvent): void {
+  if (e.changedTouches.length !== 1) return;
+  const t = e.changedTouches[0];
+  const dx = t.clientX - swipeStartX;
+  const dy = t.clientY - swipeStartY;
+  const elapsed = Date.now() - swipeStartTime;
+  const absDx = Math.abs(dx);
+  const absDy = Math.abs(dy);
+
+  // Swipe: horizontal movement > 50px, within 400ms, more horizontal than vertical
+  if (absDx > 50 && elapsed < 400 && absDx > absDy * 1.5) {
+    if (dx < 0) {
+      // Swipe left → next slide
+      if (state.currentSlide < state.slides.length - 1) showSlide(state.currentSlide + 1);
+    } else {
+      // Swipe right → previous slide
+      if (state.currentSlide > 0) showSlide(state.currentSlide - 1);
+    }
   }
 }
 

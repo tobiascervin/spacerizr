@@ -1,4 +1,4 @@
-import { C4Element, C4Relationship, ViewState } from "./types";
+import { C4Element, C4Relationship, ViewState, getElementShape } from "./types";
 import { getTheme, getElementPalette, settings } from "./settings";
 
 interface Node2D {
@@ -101,6 +101,109 @@ function sketchPerson(c: CanvasRenderingContext2D, cx: number, cy: number, size:
   c.closePath();
   c.fill();
   c.stroke();
+}
+
+// ── Architectural shape drawing functions ──
+
+function drawCylinder2D(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
+  const ry = h * 0.12; // ellipse radius for top/bottom caps
+  c.beginPath();
+  c.ellipse(x + w / 2, y + ry, w / 2, ry, 0, Math.PI, 0); // top cap (back)
+  c.lineTo(x + w, y + h - ry);
+  c.ellipse(x + w / 2, y + h - ry, w / 2, ry, 0, 0, Math.PI); // bottom cap
+  c.closePath();
+  c.fill();
+  c.stroke();
+  // Top ellipse (front)
+  c.beginPath();
+  c.ellipse(x + w / 2, y + ry, w / 2, ry, 0, 0, Math.PI * 2);
+  c.fill();
+  c.stroke();
+}
+
+function drawHorizontalCylinder2D(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
+  const rx = w * 0.1;
+  c.beginPath();
+  c.ellipse(x + rx, y + h / 2, rx, h / 2, 0, Math.PI / 2, -Math.PI / 2); // left cap
+  c.lineTo(x + w - rx, y);
+  c.ellipse(x + w - rx, y + h / 2, rx, h / 2, 0, -Math.PI / 2, Math.PI / 2); // right cap
+  c.closePath();
+  c.fill();
+  c.stroke();
+  // Right ellipse highlight
+  c.beginPath();
+  c.ellipse(x + w - rx, y + h / 2, rx, h / 2, 0, 0, Math.PI * 2);
+  c.stroke();
+}
+
+function drawHexagon2D(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
+  const cx = x + w / 2, cy = y + h / 2;
+  const rx = w / 2, ry = h / 2;
+  c.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const angle = (Math.PI / 3) * i - Math.PI / 6;
+    const px = cx + rx * Math.cos(angle);
+    const py = cy + ry * Math.sin(angle);
+    if (i === 0) c.moveTo(px, py);
+    else c.lineTo(px, py);
+  }
+  c.closePath();
+}
+
+function drawBrowser2D(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, style: { border: string }): void {
+  const barH = h * 0.15;
+  // Main window
+  sketchRoundRect(c, x, y, w, h, 6);
+  c.fill();
+  c.stroke();
+  // Title bar
+  c.beginPath();
+  c.moveTo(x, y + barH);
+  c.lineTo(x + w, y + barH);
+  c.strokeStyle = style.border;
+  c.stroke();
+  // Dots in title bar
+  const dotY = y + barH / 2;
+  for (let i = 0; i < 3; i++) {
+    c.beginPath();
+    c.arc(x + 10 + i * 10, dotY, 2.5, 0, Math.PI * 2);
+    c.fillStyle = style.border;
+    c.globalAlpha = 0.4;
+    c.fill();
+    c.globalAlpha = 1;
+  }
+}
+
+function drawMobile2D(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
+  sketchRoundRect(c, x, y, w, h, 10);
+  c.fill();
+  c.stroke();
+  // Home button / notch
+  c.beginPath();
+  c.arc(x + w / 2, y + h - 8, 3, 0, Math.PI * 2);
+  c.stroke();
+}
+
+function drawCloud2D(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
+  const cx = x + w / 2, cy = y + h * 0.55;
+  c.beginPath();
+  c.arc(cx, cy, h * 0.28, 0, Math.PI * 2); // center
+  c.arc(cx - w * 0.22, cy + h * 0.05, h * 0.22, 0, Math.PI * 2); // left
+  c.arc(cx + w * 0.22, cy + h * 0.05, h * 0.22, 0, Math.PI * 2); // right
+  c.arc(cx - w * 0.1, cy - h * 0.15, h * 0.2, 0, Math.PI * 2); // top-left
+  c.arc(cx + w * 0.12, cy - h * 0.12, h * 0.18, 0, Math.PI * 2); // top-right
+}
+
+function drawShield2D(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
+  const cx = x + w / 2;
+  c.beginPath();
+  c.moveTo(cx, y);
+  c.lineTo(x + w, y + h * 0.2);
+  c.lineTo(x + w, y + h * 0.55);
+  c.quadraticCurveTo(x + w, y + h * 0.85, cx, y + h);
+  c.quadraticCurveTo(x, y + h * 0.85, x, y + h * 0.55);
+  c.lineTo(x, y + h * 0.2);
+  c.closePath();
 }
 
 function drawArrow(
@@ -362,7 +465,9 @@ function render(): void {
 
     if (isDimmed) ctx.globalAlpha = 0.15;
 
-    if (node.element.type === "person") {
+    const shape = getElementShape(node.element);
+
+    if (shape === "person") {
       const cx = node.x + node.w / 2;
       const cy = node.y + node.h * 0.35;
 
@@ -381,7 +486,23 @@ function render(): void {
       ctx.strokeStyle = style.border;
       ctx.lineWidth = isHovered ? 2.5 : 1.8;
 
-      sketchRoundRect(ctx, node.x, node.y, node.w, node.h, 8);
+      if (shape === "database") {
+        drawCylinder2D(ctx, node.x, node.y, node.w, node.h);
+      } else if (shape === "queue") {
+        drawHorizontalCylinder2D(ctx, node.x, node.y, node.w, node.h);
+      } else if (shape === "gateway") {
+        drawHexagon2D(ctx, node.x, node.y, node.w, node.h);
+      } else if (shape === "browser") {
+        drawBrowser2D(ctx, node.x, node.y, node.w, node.h, style);
+      } else if (shape === "mobile") {
+        drawMobile2D(ctx, node.x, node.y, node.w, node.h);
+      } else if (shape === "cloud") {
+        drawCloud2D(ctx, node.x, node.y, node.w, node.h);
+      } else if (shape === "firewall") {
+        drawShield2D(ctx, node.x, node.y, node.w, node.h);
+      } else {
+        sketchRoundRect(ctx, node.x, node.y, node.w, node.h, 8);
+      }
       ctx.fill();
       ctx.stroke();
 
@@ -449,7 +570,7 @@ export function create2DScene(
 
   canvas = document.createElement("canvas");
   canvas.id = "canvas-2d";
-  canvas.style.cssText = "width:100%;height:100%;display:block;cursor:grab;";
+  canvas.style.cssText = "width:100%;height:100%;display:block;cursor:grab;touch-action:none;";
   container.appendChild(canvas);
   ctx = canvas.getContext("2d")!;
 
@@ -502,6 +623,72 @@ export function create2DScene(
     panY = my - (my - panY) * (zoom / oldZoom);
     render();
   }, { passive: false });
+
+  // ── Touch support (pan, pinch-zoom, tap-to-click) ──
+
+  let lastTouch = { x: 0, y: 0 };
+  let lastPinchDist = 0;
+  let touchStartTime = 0;
+  let touchStartPos = { x: 0, y: 0 };
+  let isTouchPanning = false;
+
+  canvas.addEventListener("touchstart", (e) => {
+    e.preventDefault();
+    if (e.touches.length === 1) {
+      const t = e.touches[0];
+      lastTouch = { x: t.clientX, y: t.clientY };
+      touchStartPos = { x: t.clientX, y: t.clientY };
+      touchStartTime = Date.now();
+      isTouchPanning = true;
+    } else if (e.touches.length === 2) {
+      isTouchPanning = false;
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      lastPinchDist = Math.hypot(dx, dy);
+    }
+  }, { passive: false });
+
+  canvas.addEventListener("touchmove", (e) => {
+    e.preventDefault();
+    if (e.touches.length === 1 && isTouchPanning) {
+      const t = e.touches[0];
+      panX += t.clientX - lastTouch.x;
+      panY += t.clientY - lastTouch.y;
+      lastTouch = { x: t.clientX, y: t.clientY };
+      render();
+    } else if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.hypot(dx, dy);
+      if (lastPinchDist > 0) {
+        const rect = canvas!.getBoundingClientRect();
+        const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+        const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+        const oldZoom = zoom;
+        zoom = Math.max(0.2, Math.min(3, zoom * (dist / lastPinchDist)));
+        panX = cx - (cx - panX) * (zoom / oldZoom);
+        panY = cy - (cy - panY) * (zoom / oldZoom);
+        render();
+      }
+      lastPinchDist = dist;
+    }
+  }, { passive: false });
+
+  canvas.addEventListener("touchend", (e) => {
+    if (isTouchPanning && e.changedTouches.length === 1) {
+      const t = e.changedTouches[0];
+      const moved = Math.hypot(t.clientX - touchStartPos.x, t.clientY - touchStartPos.y);
+      const elapsed = Date.now() - touchStartTime;
+      // Tap detection: short touch without movement
+      if (moved < 10 && elapsed < 300 && onClickCb) {
+        const rect = canvas!.getBoundingClientRect();
+        const hit = hitTest(t.clientX - rect.left, t.clientY - rect.top);
+        if (hit) onClickCb(hit.element);
+      }
+    }
+    isTouchPanning = false;
+    lastPinchDist = 0;
+  });
 
   window.addEventListener("resize", render);
 }

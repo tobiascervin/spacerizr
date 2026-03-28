@@ -1,6 +1,10 @@
 import { C4Element, C4Model } from "./types";
 import { examples } from "./examples";
 
+function isTouchDevice(): boolean {
+  return "ontouchstart" in window || navigator.maxTouchPoints > 0;
+}
+
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
@@ -858,9 +862,9 @@ function showWelcomeScreen(): void {
             <line x1="12" y1="3" x2="12" y2="15"/>
           </svg>
         </div>
-        <div class="welcome-drop-text">Drop a <strong>.dsl</strong> or <strong>.json</strong> workspace file here</div>
+        <div class="welcome-drop-text">${isTouchDevice() ? "Tap below to select a <strong>.dsl</strong> or <strong>.json</strong> file" : "Drop a <strong>.dsl</strong> or <strong>.json</strong> workspace file here"}</div>
         <div class="welcome-drop-or">or paste DSL content (Ctrl+V)</div>
-        <label class="welcome-browse-btn" for="file-input">Browse files</label>
+        <label class="welcome-browse-btn" for="file-input">${isTouchDevice() ? "Select file" : "Browse files"}</label>
       </div>
       <div class="welcome-formats">
         Supports Structurizr DSL and workspace JSON files
