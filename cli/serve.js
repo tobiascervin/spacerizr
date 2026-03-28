@@ -123,7 +123,7 @@ if (showHelp) {
   Presentation mode:
     Enter "Present" from the control panel or press the Present button.
     Left/Right     Navigate between slides
-    N              Open presenter view with speaker notes and timer
+    V              Toggle between 2D and 3D view
     1 / 2          Pointer tools: laser, spotlight
     D              Toggle drawing mode (pen, highlighter, eraser)
     T              Start/stop camera fly-through tour

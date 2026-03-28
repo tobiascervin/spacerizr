@@ -374,8 +374,8 @@ function createToolbar(): void {
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="10"/></svg>
       </button>
       <div class="pres-separator"></div>
-      <button class="pres-btn" id="pres-notes" title="Speaker notes (N)">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="7" y1="8" x2="17" y2="8"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="7" y1="16" x2="13" y2="16"/></svg>
+      <button class="pres-btn" id="pres-view-toggle" title="Switch 2D/3D (V)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3L2 9l10 6 10-6-10-6z"/><path d="M2 15l10 6 10-6"/></svg>
       </button>
       <button class="pres-btn" id="pres-export-html-deck" title="Export as HTML presentation">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
@@ -403,7 +403,7 @@ function createToolbar(): void {
   document.getElementById("pres-next")!.addEventListener("click", () => nextSlide());
   document.getElementById("pres-laser")!.addEventListener("click", () => setPointerTool(state.pointerTool === "laser" ? "none" : "laser"));
   document.getElementById("pres-spotlight-tool")!.addEventListener("click", () => setPointerTool(state.pointerTool === "spotlight" ? "none" : "spotlight"));
-  document.getElementById("pres-notes")!.addEventListener("click", () => openPresenterView());
+  document.getElementById("pres-view-toggle")!.addEventListener("click", toggleViewMode);
   document.getElementById("pres-export-html-deck")!.addEventListener("click", () => {
     if (modelFn) exportHTMLDeck(state.slides, modelFn(), settings.theme);
   });
@@ -430,6 +430,14 @@ function createSpotlightOverlay(): void {
   overlay.style.display = "none";
   document.body.appendChild(overlay);
   state.spotlightOverlay = overlay;
+}
+
+function toggleViewMode(): void {
+  const newMode = settings.viewMode === "3d" ? "2d" : "3d";
+  settings.viewMode = newMode;
+  notifySettingsChange();
+  // Re-show current slide to trigger re-render in new view mode
+  showSlide(state.currentSlide);
 }
 
 function setPointerTool(tool: PointerTool): void {
@@ -627,10 +635,10 @@ function handlePresentationKey(e: KeyboardEvent): void {
     case "2":
       setPointerTool(state.pointerTool === "spotlight" ? "none" : "spotlight");
       break;
-    // Speaker notes
-    case "n":
-    case "N":
-      openPresenterView();
+    // Toggle 2D/3D view
+    case "v":
+    case "V":
+      toggleViewMode();
       break;
 
     // Drawing overlay
@@ -775,7 +783,7 @@ function toggleHelpOverlay(): void {
         </div>
         <div class="pres-help-section">
           <h3>Features</h3>
-          <div class="pres-help-row"><kbd>N</kbd> Presenter view &amp; notes</div>
+          <div class="pres-help-row"><kbd>V</kbd> Toggle 2D / 3D view</div>
           <div class="pres-help-row"><kbd>T</kbd> Camera fly-through tour</div>
           <div class="pres-help-row"><kbd>?</kbd> This help overlay</div>
         </div>

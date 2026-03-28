@@ -1,5 +1,5 @@
 import { settings, notifySettingsChange, getTheme } from "./settings";
-import { enterPresentation, openSlideEditor } from "./presentation";
+import { enterPresentation } from "./presentation";
 
 export type ExportHandler = (format: "png" | "svg" | "copy-png" | "copy-svg" | "zip" | "mermaid" | "plantuml" | "html" | "pdf") => void;
 
@@ -136,13 +136,9 @@ export function createControlsPanel(onExport?: ExportHandler): void {
       <div class="control-section">
         <div class="section-title">Present</div>
         <div class="control-row export-row">
-          <button class="export-btn" id="present-btn" title="Enter presentation mode (P)">
+          <button class="export-btn" id="present-btn" title="Enter presentation mode (P)" style="width:100%">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="1" y="2" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M6 6l5 3-5 3V6z" fill="currentColor"/></svg>
             <span>Present</span>
-          </button>
-          <button class="export-btn" id="edit-slides-btn" title="Edit presentation slides">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.3"/><line x1="5" y1="5" x2="11" y2="5" stroke="currentColor" stroke-width="1.3"/><line x1="5" y1="8" x2="11" y2="8" stroke="currentColor" stroke-width="1.3"/><line x1="5" y1="11" x2="9" y2="11" stroke="currentColor" stroke-width="1.3"/></svg>
-            <span>Edit</span>
           </button>
         </div>
       </div>
@@ -239,7 +235,6 @@ export function createControlsPanel(onExport?: ExportHandler): void {
 
   // Present buttons
   document.getElementById("present-btn")!.addEventListener("click", () => enterPresentation());
-  document.getElementById("edit-slides-btn")!.addEventListener("click", () => openSlideEditor());
 
   // Legend swatches — apply theme colors
   updateLegendColors();
