@@ -432,13 +432,17 @@
       }
       /* ── Welcome screen (standalone) ── */
       #welcome-screen {
-        position: absolute;
+        position: fixed;
         inset: 0;
         z-index: 100;
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         justify-content: center;
         background: #0f0f1a;
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
       }
       [data-theme="light"] #welcome-screen {
         background: #f8f8f8;
@@ -448,6 +452,9 @@
         max-width: 480px;
         width: 100%;
         padding: 40px;
+        padding-top: 32px;
+        padding-bottom: 32px;
+        margin: auto 0;
       }
       .welcome-logo {
         font-size: 36px;
