@@ -196,6 +196,16 @@ function updateBreadcrumb(): void {
   const breadcrumb = document.getElementById("breadcrumb")!;
   breadcrumb.innerHTML = "";
 
+  // Mobile back button (hidden on desktop via CSS)
+  if (currentPath.length > 0) {
+    const backBtn = document.createElement("button");
+    backBtn.className = "breadcrumb-back";
+    backBtn.title = "Go back";
+    backBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Back`;
+    backBtn.addEventListener("click", () => navigateTo(currentPath.slice(0, -1)));
+    breadcrumb.appendChild(backBtn);
+  }
+
   // Home button
   const homeBtn = document.createElement("button");
   homeBtn.className = "breadcrumb-home";

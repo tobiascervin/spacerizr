@@ -75,6 +75,9 @@
       .breadcrumb-home:hover {
         opacity: 1 !important;
       }
+      .breadcrumb-back {
+        display: none; /* hidden on desktop, shown on mobile via media query */
+      }
       #breadcrumb .separator {
         color: rgba(129, 140, 248, 0.3);
         font-size: 14px;
@@ -1469,7 +1472,7 @@
       }
       /* ── Responsive: Mobile (≤640px) ── */
       @media (max-width: 640px) {
-        #controls-panel { top: 8px; right: 8px; }
+        #controls-panel { top: 8px; right: 8px; z-index: 210; }
         .controls-body.open {
           position: fixed !important;
           bottom: 0 !important;
@@ -1493,12 +1496,11 @@
           max-width: 60vw;
           font-size: 12px;
         }
-        /* On mobile, hide all breadcrumb items except home and last button */
+        /* On mobile, show only back button (when available) + home icon */
         #breadcrumb .separator { display: none; }
         #breadcrumb button { display: none; }
-        #breadcrumb button:last-child { display: inline; }
+        #breadcrumb .breadcrumb-back { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; }
         #breadcrumb .breadcrumb-home { display: inline-flex; }
-        #breadcrumb .breadcrumb-home + .separator { display: inline; }
         .welcome-content { padding: 24px 16px !important; }
         .welcome-dropzone { padding: 32px 16px !important; }
         .welcome-drop-or { display: none; }
