@@ -594,7 +594,7 @@ export function startRenderLoop(ctx: SceneContext): void {
 
       group.traverse((child) => {
         if (child instanceof THREE.Mesh && child.userData.isRing) {
-          (child.material as THREE.MeshBasicMaterial).opacity = 0.08 + Math.sin(time * 2 + offset) * 0.08;
+          (child.material as THREE.MeshBasicMaterial).opacity = 0.12;
         }
       });
     }

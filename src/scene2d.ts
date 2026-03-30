@@ -206,6 +206,37 @@ function drawShield2D(c: CanvasRenderingContext2D, x: number, y: number, w: numb
   c.closePath();
 }
 
+type TextConfig = { nameY: number; techY: number; descY: number; maxW: number };
+
+function getTextConfig(shape: string, x: number, y: number, w: number, h: number): TextConfig {
+  switch (shape) {
+    case "database":
+      // Vertical cylinder: top ellipse = h*0.24 — usable area below that
+      return { nameY: y + h * 0.52, techY: y + h * 0.67, descY: y + h * 0.82, maxW: w * 0.80 };
+    case "queue":
+      // Horizontal cylinder: left/right end-caps take w*0.10 each
+      return { nameY: y + h * 0.38, techY: y + h * 0.58, descY: y + h * 0.76, maxW: w * 0.72 };
+    case "gateway":
+      // Hexagon: widest in middle, narrower at top/bottom corners
+      return { nameY: y + h * 0.44, techY: y + h * 0.60, descY: y + h * 0.76, maxW: w * 0.68 };
+    case "browser":
+      // Browser: title bar occupies h*0.15 — content area below
+      return { nameY: y + h * 0.55, techY: y + h * 0.69, descY: y + h * 0.83, maxW: w * 0.86 };
+    case "mobile":
+      // Mobile: home button at bottom (h-8), round corners — text in upper portion
+      return { nameY: y + h * 0.38, techY: y + h * 0.54, descY: y + h * 0.68, maxW: w * 0.76 };
+    case "cloud":
+      // Cloud: centre of mass ~h*0.55, irregular edges — narrow safe zone
+      return { nameY: y + h * 0.52, techY: y + h * 0.66, descY: y + h * 0.78, maxW: w * 0.58 };
+    case "firewall":
+      // Shield: full-width at top, tapers sharply below h*0.55
+      return { nameY: y + h * 0.34, techY: y + h * 0.50, descY: y + h * 0.64, maxW: w * 0.76 };
+    default:
+      // Standard rounded box
+      return { nameY: y + h * 0.38, techY: y + h * 0.58, descY: y + h * 0.78, maxW: w * 0.88 };
+  }
+}
+
 function drawArrow(
   c: CanvasRenderingContext2D,
   x1: number, y1: number,
@@ -515,25 +546,28 @@ function render(): void {
         ctx.globalAlpha = 1;
       }
 
+      const tc = getTextConfig(shape, node.x, node.y, node.w, node.h);
+      const cx = node.x + node.w / 2;
+
       ctx.font = 'bold 14px "Inter", sans-serif';
       ctx.fillStyle = style.text;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(node.element.name, node.x + node.w / 2, node.y + node.h * 0.38);
+      ctx.fillText(node.element.name, cx, tc.nameY, tc.maxW);
 
       if (node.element.technology) {
         ctx.font = '11px "Inter", sans-serif';
         ctx.fillStyle = style.border;
-        ctx.fillText(`[${node.element.technology}]`, node.x + node.w / 2, node.y + node.h * 0.58);
+        ctx.fillText(`[${node.element.technology}]`, cx, tc.techY, tc.maxW);
       }
 
       if (node.element.description) {
         ctx.font = '11px "Inter", sans-serif';
         ctx.fillStyle = style.text + "99";
-        const maxChars = Math.floor(node.w / 7);
+        const maxChars = Math.floor(tc.maxW / 7);
         let desc = node.element.description;
         if (desc.length > maxChars) desc = desc.slice(0, maxChars - 1) + "...";
-        ctx.fillText(desc, node.x + node.w / 2, node.y + node.h * 0.78);
+        ctx.fillText(desc, cx, tc.descY, tc.maxW);
       }
     }
 
