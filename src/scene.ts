@@ -177,18 +177,6 @@ function createElementMesh(element: C4Element): THREE.Group {
 
   addSketchEdges(group, geometry, pal.border, meshYOffset);
 
-  // Shadow plane
-  const shadowGeo = new THREE.PlaneGeometry(2.8, 1.8);
-  const shadowMat = new THREE.MeshBasicMaterial({
-    color: 0x000000,
-    transparent: true,
-    opacity: theme.shadowOpacity,
-    side: THREE.DoubleSide,
-  });
-  const shadowPlane = new THREE.Mesh(shadowGeo, shadowMat);
-  shadowPlane.rotation.x = -Math.PI / 2;
-  shadowPlane.position.y = -0.49;
-  group.add(shadowPlane);
 
   // Labels
   const labelY = element.type === "person" ? 1.8 : 1.0;
@@ -214,6 +202,8 @@ function createElementMesh(element: C4Element): THREE.Group {
     ring.rotation.x = -Math.PI / 2;
     ring.position.y = -0.48;
     ring.userData.isRing = true;
+    ring.userData.isGroundDecal = true;
+    ring.userData.groundY = -0.48;
     group.add(ring);
   }
 
@@ -592,9 +582,11 @@ export function startRenderLoop(ctx: SceneContext): void {
         group.position.y = baseY;
       }
 
+      const floatOffset = group.position.y - baseY;
       group.traverse((child) => {
-        if (child instanceof THREE.Mesh && child.userData.isRing) {
-          (child.material as THREE.MeshBasicMaterial).opacity = 0.12;
+        if (child instanceof THREE.Mesh && child.userData.isGroundDecal) {
+          // Counter-act the floating so shadow/ring always stay at ground level
+          child.position.y = child.userData.groundY - floatOffset;
         }
       });
     }

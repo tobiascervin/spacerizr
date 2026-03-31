@@ -178,20 +178,39 @@ function drawMobile2D(c: CanvasRenderingContext2D, x: number, y: number, w: numb
   sketchRoundRect(c, x, y, w, h, 10);
   c.fill();
   c.stroke();
-  // Home button / notch
+  // Notch at top
   c.beginPath();
-  c.arc(x + w / 2, y + h - 8, 3, 0, Math.PI * 2);
+  c.roundRect(x + w * 0.3, y + 4, w * 0.4, 5, 3);
   c.stroke();
 }
 
 function drawCloud2D(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
-  const cx = x + w / 2, cy = y + h * 0.55;
+  // 3 puffs at top, flat rounded body at bottom — clean text area
+  const bumps = [
+    { cx: x + w * 0.22, cy: y + h * 0.30, r: w * 0.19 },
+    { cx: x + w * 0.50, cy: y + h * 0.18, r: w * 0.24 },
+    { cx: x + w * 0.78, cy: y + h * 0.30, r: w * 0.19 },
+  ];
+  const bodyTop = y + h * 0.38;
+  const br = 6;
+
+  // Fill bumps first
+  for (const b of bumps) {
+    c.beginPath();
+    c.arc(b.cx, b.cy, b.r, 0, Math.PI * 2);
+    c.fill();
+  }
+  // Fill + stroke body rect (covers bottom of bumps cleanly)
   c.beginPath();
-  c.arc(cx, cy, h * 0.28, 0, Math.PI * 2); // center
-  c.arc(cx - w * 0.22, cy + h * 0.05, h * 0.22, 0, Math.PI * 2); // left
-  c.arc(cx + w * 0.22, cy + h * 0.05, h * 0.22, 0, Math.PI * 2); // right
-  c.arc(cx - w * 0.1, cy - h * 0.15, h * 0.2, 0, Math.PI * 2); // top-left
-  c.arc(cx + w * 0.12, cy - h * 0.12, h * 0.18, 0, Math.PI * 2); // top-right
+  c.roundRect(x, bodyTop, w, y + h - bodyTop, [0, 0, br, br]);
+  c.fill();
+  c.stroke();
+  // Stroke bump outlines (only the exposed arcs above body)
+  for (const b of bumps) {
+    c.beginPath();
+    c.arc(b.cx, b.cy, b.r, Math.PI, 0); // top semicircle only
+    c.stroke();
+  }
 }
 
 function drawShield2D(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
@@ -226,8 +245,8 @@ function getTextConfig(shape: string, x: number, y: number, w: number, h: number
       // Mobile: home button at bottom (h-8), round corners — text in upper portion
       return { nameY: y + h * 0.38, techY: y + h * 0.54, descY: y + h * 0.68, maxW: w * 0.76 };
     case "cloud":
-      // Cloud: centre of mass ~h*0.55, irregular edges — narrow safe zone
-      return { nameY: y + h * 0.52, techY: y + h * 0.66, descY: y + h * 0.78, maxW: w * 0.58 };
+      // Cloud: body starts at h*0.38, text sits in the flat lower portion
+      return { nameY: y + h * 0.58, techY: y + h * 0.72, descY: y + h * 0.84, maxW: w * 0.86 };
     case "firewall":
       // Shield: full-width at top, tapers sharply below h*0.55
       return { nameY: y + h * 0.34, techY: y + h * 0.50, descY: y + h * 0.64, maxW: w * 0.76 };
@@ -564,10 +583,37 @@ function render(): void {
       if (node.element.description) {
         ctx.font = '11px "Inter", sans-serif';
         ctx.fillStyle = style.text + "99";
-        const maxChars = Math.floor(tc.maxW / 7);
-        let desc = node.element.description;
-        if (desc.length > maxChars) desc = desc.slice(0, maxChars - 1) + "...";
-        ctx.fillText(desc, cx, tc.descY, tc.maxW);
+        const lineH = 14;
+        const words = node.element.description.split(" ");
+        // Build line 1
+        let line1 = "";
+        let wi = 0;
+        while (wi < words.length && ctx.measureText((line1 ? line1 + " " : "") + words[wi]).width <= tc.maxW) {
+          line1 = (line1 ? line1 + " " : "") + words[wi++];
+        }
+        // Build line 2 (truncate with "…" if needed)
+        let line2 = "";
+        while (wi < words.length) {
+          const attempt = (line2 ? line2 + " " : "") + words[wi];
+          if (ctx.measureText(attempt).width <= tc.maxW) {
+            line2 = attempt;
+            wi++;
+          } else {
+            // Trim back until "…" fits
+            let trimmed = line2;
+            while (trimmed && ctx.measureText(trimmed + "…").width > tc.maxW) {
+              trimmed = trimmed.slice(0, trimmed.lastIndexOf(" "));
+            }
+            line2 = (trimmed || line2.slice(0, -1)) + "…";
+            break;
+          }
+        }
+        if (line2) {
+          ctx.fillText(line1, cx, tc.descY - lineH / 2, tc.maxW);
+          ctx.fillText(line2, cx, tc.descY + lineH / 2, tc.maxW);
+        } else {
+          ctx.fillText(line1, cx, tc.descY, tc.maxW);
+        }
       }
     }
 
