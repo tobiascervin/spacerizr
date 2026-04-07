@@ -4,3 +4,4 @@ dist-lib/
 *.local
 .DS_Store
 .claude/
+.env
