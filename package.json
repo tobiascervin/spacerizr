@@ -1,6 +1,6 @@
 {
   "name": "spacerizr",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "type": "module",
   "description": "Interactive 3D/2D C4 architecture visualizer for Structurizr DSL and workspace files",
   "keywords": [
@@ -15,6 +15,14 @@
   ],
   "author": "Tobias Cervin",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tobiascervin/spacerizr.git"
+  },
+  "homepage": "https://github.com/tobiascervin/spacerizr#readme",
+  "bugs": {
+    "url": "https://github.com/tobiascervin/spacerizr/issues"
+  },
   "main": "./dist-lib/api.js",
   "module": "./dist-lib/api.js",
   "types": "./dist-lib/api.d.ts",
